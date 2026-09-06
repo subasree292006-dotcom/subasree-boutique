@@ -1,6 +1,9 @@
 import { useState } from "react";
 import "./Auth.css";
 
+// Backend API URL
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 function Login({ onLogin, goToRegister }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -13,7 +16,8 @@ function Login({ onLogin, goToRegister }) {
 
     setError("");
 
-    if (!username || !password) {
+    // Validation
+    if (!username.trim() || !password.trim()) {
       setError("Please enter username and password");
       return;
     }
@@ -22,36 +26,59 @@ function Login({ onLogin, goToRegister }) {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/login",
+        `${API_URL}/api/auth/login`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            username,
+            username: username.trim(),
             password,
           }),
         }
       );
 
-      const data = await response.json();
+      // Handle non-JSON response
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Server returned an invalid response");
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+        throw new Error(
+          data.message || "Invalid username or password"
+        );
       }
 
       // Save login information
-      localStorage.setItem("token", data.token);
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify(data.user)
-      );
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
 
+      if (data.user) {
+        localStorage.setItem(
+          "currentUser",
+          JSON.stringify(data.user)
+        );
+      }
+
+      // Login success
       onLogin(data.user);
 
     } catch (error) {
-      setError(error.message);
+      console.error("Login Error:", error);
+
+      if (error.name === "TypeError") {
+        setError(
+          "Unable to connect to server. Please check your backend."
+        );
+      } else {
+        setError(error.message || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -62,50 +89,73 @@ function Login({ onLogin, goToRegister }) {
 
       <div className="auth-card">
 
+        {/* Logo */}
         <div className="auth-logo">
           ✂️
         </div>
 
+        {/* Title */}
         <h1>Tailor Manager</h1>
 
         <p className="auth-subtitle">
           Login to manage your tailoring business
         </p>
 
+        {/* Login Form */}
         <form onSubmit={handleLogin}>
 
+          {/* Username */}
           <div className="auth-input-group">
-            <label>Username</label>
+
+            <label htmlFor="username">
+              Username
+            </label>
 
             <input
+              id="username"
               type="text"
               placeholder="Enter username"
               value={username}
-              onChange={(e) =>
-                setUsername(e.target.value)
-              }
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setError("");
+              }}
+              autoComplete="username"
+              disabled={loading}
             />
+
           </div>
 
+          {/* Password */}
           <div className="auth-input-group">
-            <label>Password</label>
+
+            <label htmlFor="password">
+              Password
+            </label>
 
             <input
+              id="password"
               type="password"
               placeholder="Enter password"
               value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              autoComplete="current-password"
+              disabled={loading}
             />
+
           </div>
 
+          {/* Error */}
           {error && (
             <div className="auth-error">
               {error}
             </div>
           )}
 
+          {/* Login Button */}
           <button
             type="submit"
             className="auth-button"
@@ -116,13 +166,17 @@ function Login({ onLogin, goToRegister }) {
 
         </form>
 
+        {/* Register */}
         <div className="auth-switch">
 
-          <span>Don't have an account?</span>
+          <span>
+            Don't have an account?
+          </span>
 
           <button
             type="button"
             onClick={goToRegister}
+            disabled={loading}
           >
             Create Account
           </button>
