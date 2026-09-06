@@ -1,0 +1,488 @@
+/* ==========================================
+   APP CONTAINER
+========================================== */
+
+.app-container {
+  min-height: 100vh;
+  background: #f8f6f8;
+}
+
+
+/* ==========================================
+   LEFT SIDEBAR
+========================================== */
+
+.app-sidebar {
+  position: fixed;
+
+  left: 0;
+  top: 0;
+
+  width: 250px;
+  height: 100vh;
+
+  background: #ffffff;
+
+  border-right: 1px solid #eadfe7;
+
+  display: flex;
+  flex-direction: column;
+
+  z-index: 1000;
+
+  box-shadow:
+    4px 0 20px rgba(80, 40, 70, 0.05);
+
+  overflow-y: auto;
+}
+
+
+/* ==========================================
+   SIDEBAR LOGO
+========================================== */
+
+.sidebar-logo {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 24px 20px;
+
+  border-bottom: 1px solid #f0e7ed;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background: #f4e4ed;
+
+  font-size: 22px;
+}
+
+.sidebar-logo h2 {
+  margin: 0;
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color: #713052;
+}
+
+.sidebar-logo span {
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 10px;
+
+  color: #9b8c96;
+}
+
+
+/* ==========================================
+   USER
+========================================== */
+
+.sidebar-user {
+  margin: 16px;
+
+  padding: 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  border-radius: 12px;
+
+  background: #faf5f8;
+}
+
+.sidebar-user-icon {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #ead1df;
+
+  font-size: 18px;
+}
+
+.sidebar-user-details {
+  min-width: 0;
+}
+
+.sidebar-user-details strong {
+  display: block;
+
+  color: #4d4149;
+
+  font-size: 13px;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-details small {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #988b94;
+
+  font-size: 11px;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+
+/* ==========================================
+   NAVIGATION
+========================================== */
+
+.sidebar-nav {
+  flex: 1;
+
+  padding: 4px 12px;
+}
+
+.nav-section-title {
+  margin: 18px 10px 7px;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
+  color: #aaa0a7;
+}
+
+
+/* ==========================================
+   NAV ITEM
+========================================== */
+
+.sidebar-nav-item {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px 13px;
+
+  margin-bottom: 4px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: transparent;
+
+  color: #665b63;
+
+  font-size: 13px;
+
+  font-weight: 500;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sidebar-nav-item:hover {
+  background: #faf0f6;
+
+  color: #82365f;
+
+  transform: translateX(2px);
+}
+
+.sidebar-nav-item.active {
+  background: #f0dce8;
+
+  color: #7d2f59;
+
+  font-weight: 700;
+
+  box-shadow:
+    inset 3px 0 0 #9a4773;
+}
+
+.nav-icon {
+  width: 24px;
+
+  flex-shrink: 0;
+
+  text-align: center;
+
+  font-size: 17px;
+}
+
+.nav-text {
+  white-space: nowrap;
+}
+
+
+/* ==========================================
+   SIDEBAR BOTTOM
+========================================== */
+
+.sidebar-bottom {
+  padding: 14px 12px 20px;
+
+  border-top: 1px solid #f0e7ed;
+}
+
+.sidebar-logout {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px 13px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: #fff3f3;
+
+  color: #c24747;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.sidebar-logout:hover {
+  background: #ffe3e3;
+
+  color: #b63232;
+}
+
+
+/* ==========================================
+   MAIN CONTENT
+========================================== */
+
+.app-content {
+  margin-left: 250px;
+
+  min-height: 100vh;
+
+  padding: 24px;
+
+  box-sizing: border-box;
+}
+
+
+/* ==========================================
+   MOBILE TOP BAR
+========================================== */
+
+.mobile-topbar {
+  display: none;
+}
+
+
+/* ==========================================
+   SIDEBAR OVERLAY
+========================================== */
+
+.sidebar-overlay {
+  display: none;
+}
+
+
+/* ==========================================
+   TABLET
+========================================== */
+
+@media (max-width: 900px) {
+
+  .app-sidebar {
+    width: 220px;
+  }
+
+  .app-content {
+    margin-left: 220px;
+
+    padding: 18px;
+  }
+
+}
+
+
+/* ==========================================
+   MOBILE
+========================================== */
+
+@media (max-width: 700px) {
+
+  .mobile-topbar {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+
+    height: 60px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 0 15px;
+
+    box-sizing: border-box;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #eadfe7;
+
+    z-index: 900;
+  }
+
+  .sidebar-toggle {
+    width: 40px;
+    height: 40px;
+
+    border: none;
+
+    border-radius: 9px;
+
+    background: #f4e4ed;
+
+    color: #783457;
+
+    font-size: 21px;
+
+    cursor: pointer;
+  }
+
+  .mobile-logo {
+    font-size: 17px;
+
+    font-weight: 700;
+
+    color: #713052;
+  }
+
+
+  /* SIDEBAR */
+
+  .app-sidebar {
+    width: 250px;
+
+    transform:
+      translateX(-100%);
+
+    transition:
+      transform 0.25s ease;
+
+    box-shadow: none;
+  }
+
+  .app-sidebar.sidebar-open {
+    transform:
+      translateX(0);
+
+    box-shadow:
+      8px 0 30px
+      rgba(50, 20, 40, 0.15);
+  }
+
+
+  /* OVERLAY */
+
+  .sidebar-overlay {
+    display: block;
+
+    position: fixed;
+
+    inset: 0;
+
+    background:
+      rgba(0, 0, 0, 0.35);
+
+    z-index: 950;
+  }
+
+
+  /* CONTENT */
+
+  .app-content {
+    margin-left: 0;
+
+    padding: 75px 12px 20px;
+  }
+
+}
+
+
+/* ==========================================
+   SMALL MOBILE
+========================================== */
+
+@media (max-width: 450px) {
+
+  .mobile-topbar {
+    height: 56px;
+  }
+
+  .mobile-logo {
+    font-size: 15px;
+  }
+
+  .app-content {
+    padding:
+      68px 8px 15px;
+  }
+
+}
