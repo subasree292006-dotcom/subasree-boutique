@@ -2,7 +2,7 @@ import { useState } from "react";
 import "./Auth.css";
 
 // Backend API URL
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = "https://subasree-boutique-backend.onrender.com";
 
 function Login({ onLogin, goToRegister }) {
   const [username, setUsername] = useState("");
