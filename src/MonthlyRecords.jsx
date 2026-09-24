@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-
-const API_URL = "http://localhost:5000/api";
+import "./MonthlyRecords.css";
 
 function MonthlyRecords() {
   // ==========================================
@@ -8,166 +7,35 @@ function MonthlyRecords() {
   // ==========================================
 
   const [records, setRecords] = useState([]);
-
   const [search, setSearch] = useState("");
-
   const [selectedMonth, setSelectedMonth] =
     useState("all");
-
   const [loading, setLoading] = useState(true);
 
   // ==========================================
-  // FORMAT BACKEND RECORD
+  // LOAD RECORDS FROM LOCAL STORAGE
   // ==========================================
 
-  const formatRecord = (record) => ({
-    id: record.id,
-
-    orderId:
-      record.order_id || "",
-
-    // IMPORTANT:
-    // Tailor Stitching DATE gets first priority
-    date:
-      record.date || "",
-
-    customerName:
-      record.customer_name || "",
-
-    dressName:
-      record.dress_name || "",
-
-    dressType:
-      record.dress_type || "",
-
-    quantity:
-      Number(record.quantity || 0),
-
-    stitchingAmount:
-      Number(record.stitching_amount || 0),
-
-    liningName:
-      record.lining_name || "",
-
-    liningColor:
-      record.lining_color || "",
-
-    liningUsed:
-      Number(record.lining_used || 0),
-
-    status:
-      record.status || "",
-
-    notes:
-      record.notes || "",
-
-    // Keep completed_date separately
-    completedDate:
-      record.completed_date || "",
-  });
-
-  // ==========================================
-  // LOAD COMPLETED RECORDS
-  // ==========================================
-
-  const loadRecords = async () => {
+  const loadRecords = () => {
     try {
       setLoading(true);
 
-      const token =
-        localStorage.getItem("token");
+      const savedRecords =
+        localStorage.getItem("monthlyRecords");
 
-      // ======================================
-      // NO LOGIN
-      // ======================================
-
-      if (!token) {
+      if (!savedRecords) {
         setRecords([]);
         return;
       }
 
-      // ======================================
-      // FETCH ORDERS
-      // ======================================
+      const parsedRecords =
+        JSON.parse(savedRecords);
 
-      const response = await fetch(
-        `${API_URL}/orders`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      // ======================================
-      // INVALID TOKEN
-      // ======================================
-
-      if (response.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem(
-          "currentUser"
-        );
-
-        window.location.reload();
-
-        return;
+      if (Array.isArray(parsedRecords)) {
+        setRecords(parsedRecords);
+      } else {
+        setRecords([]);
       }
-
-      // ======================================
-      // OTHER ERROR
-      // ======================================
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to load records"
-        );
-      }
-
-      // ======================================
-      // RESPONSE
-      // ======================================
-
-      const data =
-        await response.json();
-
-      // ======================================
-      // SUPPORT BOTH RESPONSE FORMATS
-      // ======================================
-
-      const allOrders =
-        Array.isArray(data)
-          ? data
-          : Array.isArray(data.orders)
-          ? data.orders
-          : [];
-
-      // ======================================
-      // ONLY COMPLETED ORDERS
-      // ======================================
-
-      const completedOrders =
-        allOrders
-          .filter(
-            (order) =>
-              String(
-                order.status || ""
-              ).toLowerCase() ===
-              "completed"
-          )
-          .map(formatRecord);
-
-      // ======================================
-      // SAVE
-      // ======================================
-
-      setRecords(
-        completedOrders
-      );
-
     } catch (error) {
       console.error(
         "Monthly records loading error:",
@@ -175,7 +43,6 @@ function MonthlyRecords() {
       );
 
       setRecords([]);
-
     } finally {
       setLoading(false);
     }
@@ -197,29 +64,26 @@ function MonthlyRecords() {
       handleUpdate
     );
 
+    window.addEventListener(
+      "monthlyRecordsUpdated",
+      handleUpdate
+    );
+
     return () => {
       window.removeEventListener(
         "ordersUpdated",
+        handleUpdate
+      );
+
+      window.removeEventListener(
+        "monthlyRecordsUpdated",
         handleUpdate
       );
     };
   }, []);
 
   // ==========================================
-  // IMPORTANT:
-  // RECORD DATE
-  // ==========================================
-  //
-  // Tailor Stitching date should be used
-  // for Monthly Records.
-  //
-  // Example:
-  // date = 2026-10-10
-  // completed_date = 2026-09-03
-  //
-  // Monthly Records will use:
-  // 2026-10-10
-  //
+  // GET RECORD DATE
   // ==========================================
 
   const getRecordDate = (record) => {
@@ -382,9 +246,7 @@ function MonthlyRecords() {
           groups[monthKey] = [];
         }
 
-        groups[monthKey].push(
-          record
-        );
+        groups[monthKey].push(record);
 
         return groups;
       },
@@ -403,10 +265,10 @@ function MonthlyRecords() {
       .reverse();
 
   // ==========================================
-  // DELETE RECORD
+  // DELETE ONE RECORD
   // ==========================================
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     const confirmDelete =
       window.confirm(
         "Are you sure you want to delete this completed record permanently?"
@@ -417,81 +279,40 @@ function MonthlyRecords() {
     }
 
     try {
-      const token =
-        localStorage.getItem("token");
-
-      if (!token) {
-        alert(
-          "Please login again."
+      const updatedRecords =
+        records.filter(
+          (record) =>
+            String(record.id) !==
+            String(id)
         );
 
-        return;
-      }
+      // Update state
+      setRecords(updatedRecords);
 
-      const response = await fetch(
-        `${API_URL}/orders/${id}`,
-        {
-          method: "DELETE",
-
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
+      // Save localStorage
+      localStorage.setItem(
+        "monthlyRecords",
+        JSON.stringify(
+          updatedRecords
+        )
       );
 
-      // ======================================
-      // TOKEN EXPIRED
-      // ======================================
-
-      if (response.status === 401) {
-        localStorage.removeItem(
-          "token"
-        );
-
-        localStorage.removeItem(
-          "currentUser"
-        );
-
-        window.location.reload();
-
-        return;
-      }
-
-      // ======================================
-      // ERROR
-      // ======================================
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to delete record"
-        );
-      }
-
-      // ======================================
-      // REMOVE FROM UI
-      // ======================================
-
-      setRecords(
-        (previousRecords) =>
-          previousRecords.filter(
-            (record) =>
-              record.id !== id
-          )
+      // Update other pages
+      window.dispatchEvent(
+        new Event(
+          "ordersUpdated"
+        )
       );
-
-      // ======================================
-      // UPDATE OTHER PAGES
-      // ======================================
 
       window.dispatchEvent(
-        new Event("ordersUpdated")
+        new Event(
+          "monthlyRecordsUpdated"
+        )
       );
 
       alert(
         "Monthly record deleted successfully!"
       );
-
     } catch (error) {
       console.error(
         "Delete monthly record error:",
@@ -505,17 +326,17 @@ function MonthlyRecords() {
   };
 
   // ==========================================
-  // CLEAR ALL
+  // CLEAR ALL RECORDS
   // ==========================================
 
-  const handleClearAll = async () => {
+  const handleClearAll = () => {
     if (records.length === 0) {
       return;
     }
 
     const confirmClear =
       window.confirm(
-        "WARNING!\n\nThis will permanently delete ALL completed records for this account.\n\nAre you sure?"
+        "WARNING!\n\nThis will permanently delete ALL completed records.\n\nAre you sure?"
       );
 
     if (!confirmClear) {
@@ -523,62 +344,31 @@ function MonthlyRecords() {
     }
 
     try {
-      const token =
-        localStorage.getItem("token");
-
-      if (!token) {
-        alert(
-          "Please login again."
-        );
-
-        return;
-      }
-
-      // ======================================
-      // DELETE ONE BY ONE
-      // ======================================
-
-      for (
-        const record of records
-      ) {
-        const response =
-          await fetch(
-            `${API_URL}/orders/${record.id}`,
-            {
-              method: "DELETE",
-
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-              },
-            }
-          );
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to delete record ${record.id}`
-          );
-        }
-      }
-
-      // ======================================
-      // CLEAR UI
-      // ======================================
-
+      // Clear state
       setRecords([]);
 
-      // ======================================
-      // UPDATE OTHER PAGES
-      // ======================================
+      // Clear localStorage
+      localStorage.setItem(
+        "monthlyRecords",
+        JSON.stringify([])
+      );
+
+      // Update other pages
+      window.dispatchEvent(
+        new Event(
+          "ordersUpdated"
+        )
+      );
 
       window.dispatchEvent(
-        new Event("ordersUpdated")
+        new Event(
+          "monthlyRecordsUpdated"
+        )
       );
 
       alert(
         "All monthly records deleted successfully!"
       );
-
     } catch (error) {
       console.error(
         "Clear all error:",
@@ -586,7 +376,7 @@ function MonthlyRecords() {
       );
 
       alert(
-        "Some records could not be deleted."
+        "Failed to clear monthly records."
       );
 
       loadRecords();
@@ -594,7 +384,7 @@ function MonthlyRecords() {
   };
 
   // ==========================================
-  // TOTALS
+  // TOTAL CLOTHES
   // ==========================================
 
   const totalClothes =
@@ -607,6 +397,10 @@ function MonthlyRecords() {
       0
     );
 
+  // ==========================================
+  // TOTAL AMOUNT
+  // ==========================================
+
   const totalAmount =
     filteredRecords.reduce(
       (total, record) =>
@@ -614,6 +408,20 @@ function MonthlyRecords() {
         Number(
           record.stitchingAmount ||
             0
+        ),
+      0
+    );
+
+  // ==========================================
+  // TOTAL LINING
+  // ==========================================
+
+  const totalLining =
+    filteredRecords.reduce(
+      (total, record) =>
+        total +
+        Number(
+          record.liningUsed || 0
         ),
       0
     );
@@ -639,8 +447,8 @@ function MonthlyRecords() {
             </h3>
 
             <p>
-              Getting your history
-              from database.
+              Getting your completed
+              stitching history.
             </p>
 
           </div>
@@ -714,6 +522,18 @@ function MonthlyRecords() {
 
           </div>
 
+          <div>
+
+            <span>
+              Lining Used
+            </span>
+
+            <strong>
+              {totalLining.toFixed(1)}m
+            </strong>
+
+          </div>
+
         </div>
 
       </div>
@@ -733,9 +553,8 @@ function MonthlyRecords() {
             </h3>
 
             <p>
-              Your completed records
-              are stored permanently
-              in the database.
+              Completed records are
+              stored in your browser.
             </p>
 
           </div>
@@ -782,7 +601,9 @@ function MonthlyRecords() {
 
                   return (
                     <option
-                      key={monthKey}
+                      key={
+                        monthKey
+                      }
                       value={
                         monthKey
                       }
@@ -888,6 +709,21 @@ function MonthlyRecords() {
               );
 
             // =================================
+            // MONTH TOTAL LINING
+            // =================================
+
+            const monthLining =
+              monthRecords.reduce(
+                (total, record) =>
+                  total +
+                  Number(
+                    record.liningUsed ||
+                      0
+                  ),
+                0
+              );
+
+            // =================================
             // MONTH NAME
             // =================================
 
@@ -974,6 +810,25 @@ function MonthlyRecords() {
 
                     </div>
 
+                    <div>
+
+                      <small>
+                        Lining Used
+                      </small>
+
+                      <strong
+                        style={{
+                          display:
+                            "block",
+                        }}
+                      >
+                        {monthLining.toFixed(
+                          1
+                        )}m
+                      </strong>
+
+                    </div>
+
                   </div>
 
                 </div>
@@ -991,7 +846,7 @@ function MonthlyRecords() {
                       <tr>
 
                         <th>
-                          Completed Date
+                          Stitching Date
                         </th>
 
                         <th>
@@ -1110,13 +965,25 @@ function MonthlyRecords() {
 
                               <td>
 
-                                {Number(
-                                  record.liningUsed ||
-                                    0
-                                ).toFixed(
-                                  1
-                                )}{" "}
-                                m
+                                {record.liningName
+                                  ? `${record.liningName}${
+                                      record.liningColour
+                                        ? ` - ${record.liningColour}`
+                                        : ""
+                                    }`
+                                  : record.liningColor
+                                  ? record.liningColor
+                                  : Number(
+                                      record.liningUsed ||
+                                        0
+                                    ) > 0
+                                  ? `${Number(
+                                      record.liningUsed ||
+                                        0
+                                    ).toFixed(
+                                      1
+                                    )} m`
+                                  : "-"}
 
                               </td>
 
@@ -1124,9 +991,7 @@ function MonthlyRecords() {
 
                               <td>
 
-                                <span
-                                  className="status completed"
-                                >
+                                <span className="status completed">
                                   Completed
                                 </span>
 
@@ -1151,6 +1016,7 @@ function MonthlyRecords() {
                               </td>
 
                             </tr>
+
                           );
                         }
                       )}
@@ -1162,6 +1028,7 @@ function MonthlyRecords() {
                 </div>
 
               </div>
+
             );
           }
         )

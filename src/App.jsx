@@ -1,266 +1,62 @@
-import { useEffect, useState } from "react";
-
-import Login from "./Login";
-import Register from "./Register";
+import { useState } from "react";
 
 import Dashboard from "./Dashboard";
 import TailorStitching from "./TailorStitching";
+import LiningStock from "./LiningStock";
 import MonthlyRecords from "./MonthlyRecords";
 
 import "./App.css";
 
-const API_URL = "http://localhost:5000/api";
-
 function App() {
-  // ==========================================
-  // AUTH STATES
-  // ==========================================
-
-  const [isCheckingAuth, setIsCheckingAuth] =
-    useState(true);
-
-  const [isLoggedIn, setIsLoggedIn] =
-    useState(false);
-
-  const [currentUser, setCurrentUser] =
-    useState(null);
-
-  const [showRegister, setShowRegister] =
-    useState(false);
-
-  // ==========================================
-  // PAGE STATE
-  // ==========================================
-
   const [activePage, setActivePage] =
     useState("Dashboard");
-
-  // ==========================================
-  // SIDEBAR STATE
-  // ==========================================
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
 
-  // ==========================================
-  // CHECK LOGIN
-  // ==========================================
-
-  useEffect(() => {
-    checkAuthentication();
-  }, []);
-
-  const checkAuthentication = async () => {
-    const token =
-      localStorage.getItem("token");
-
-    if (!token) {
-      setIsLoggedIn(false);
-      setCurrentUser(null);
-      setIsCheckingAuth(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API_URL}/auth/me`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Invalid or expired token"
-        );
-      }
-
-      const data =
-        await response.json();
-
-      const user =
-        data.user || data;
-
-      setCurrentUser(user);
-      setIsLoggedIn(true);
-
-      localStorage.setItem(
-        "currentUser",
-        JSON.stringify(user)
-      );
-
-    } catch (error) {
-      console.log(
-        "Authentication failed:",
-        error
-      );
-
-      localStorage.removeItem(
-        "token"
-      );
-
-      localStorage.removeItem(
-        "currentUser"
-      );
-
-      setIsLoggedIn(false);
-      setCurrentUser(null);
-
-    } finally {
-      setIsCheckingAuth(false);
-    }
-  };
-
-  // ==========================================
-  // LOGIN SUCCESS
-  // ==========================================
-
-  const handleLogin = () => {
-    const savedUser =
-      localStorage.getItem(
-        "currentUser"
-      );
-
-    if (savedUser) {
-      try {
-        setCurrentUser(
-          JSON.parse(savedUser)
-        );
-      } catch (error) {
-        console.log(
-          "User data error:",
-          error
-        );
-      }
-    }
-
-    setIsLoggedIn(true);
-    setActivePage("Dashboard");
-  };
-
-  // ==========================================
-  // GO TO LOGIN
-  // ==========================================
-
-  const handleGoToLogin = () => {
-    setShowRegister(false);
-  };
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
-
-  const handleLogout = () => {
-    const confirmLogout =
-      window.confirm(
-        "Are you sure you want to logout?"
-      );
-
-    if (!confirmLogout) {
-      return;
-    }
-
-    localStorage.removeItem(
-      "token"
-    );
-
-    localStorage.removeItem(
-      "currentUser"
-    );
-
-    setCurrentUser(null);
-    setIsLoggedIn(false);
-    setShowRegister(false);
-    setActivePage("Dashboard");
-    setSidebarOpen(false);
-  };
-
-  // ==========================================
-  // PAGE CHANGE
-  // ==========================================
+  // =====================================================
+  // CHANGE PAGE
+  // =====================================================
 
   const changePage = (page) => {
     setActivePage(page);
-
-    // Close sidebar on mobile
     setSidebarOpen(false);
   };
 
-  // ==========================================
-  // AUTH LOADING
-  // ==========================================
+  // =====================================================
+  // PAGE CONTENT
+  // =====================================================
 
-  if (isCheckingAuth) {
-    return (
-      <div className="auth-loading-screen">
+  const renderPage = () => {
+    if (activePage === "Dashboard") {
+      return <Dashboard />;
+    }
 
-        <div className="auth-loading-box">
+    if (activePage === "Tailor Stitching") {
+      return <TailorStitching />;
+    }
 
-          <div className="loading-spinner"></div>
+    if (activePage === "Lining Stock") {
+      return <LiningStock />;
+    }
 
-          <h2>
-            Tailor Manager
-          </h2>
+    if (activePage === "Monthly Records") {
+      return <MonthlyRecords />;
+    }
 
-          <p>
-            Checking login...
-          </p>
+    return <Dashboard />;
+  };
 
-        </div>
-
-      </div>
-    );
-  }
-
-  // ==========================================
-  // REGISTER PAGE
-  // ==========================================
-
-  if (
-    !isLoggedIn &&
-    showRegister
-  ) {
-    return (
-      <Register
-        goToLogin={
-          handleGoToLogin
-        }
-      />
-    );
-  }
-
-  // ==========================================
-  // LOGIN PAGE
-  // ==========================================
-
-  if (!isLoggedIn) {
-    return (
-      <Login
-        onLogin={
-          handleLogin
-        }
-        goToRegister={() =>
-          setShowRegister(true)
-        }
-      />
-    );
-  }
-
-  // ==========================================
-  // MAIN APP
-  // ==========================================
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
     <div className="app-container">
 
-      {/* ======================================
+      {/* =================================================
           MOBILE TOP BAR
-      ======================================= */}
+      ================================================= */}
 
       <div className="mobile-topbar">
 
@@ -281,21 +77,21 @@ function App() {
 
       </div>
 
-      {/* ======================================
+      {/* =================================================
           SIDEBAR
-      ======================================= */}
+      ================================================= */}
 
       <aside
-        className={`app-sidebar ${
+        className={
           sidebarOpen
-            ? "sidebar-open"
-            : ""
-        }`}
+            ? "app-sidebar sidebar-open"
+            : "app-sidebar"
+        }
       >
 
-        {/* ====================================
+        {/* =================================================
             LOGO
-        ==================================== */}
+        ================================================= */}
 
         <div className="sidebar-logo">
 
@@ -304,6 +100,7 @@ function App() {
           </div>
 
           <div>
+
             <h2>
               Tailor Manager
             </h2>
@@ -311,68 +108,50 @@ function App() {
             <span>
               Management System
             </span>
-          </div>
-
-        </div>
-
-        {/* ====================================
-            USER
-        ==================================== */}
-
-        <div className="sidebar-user">
-
-          <div className="sidebar-user-icon">
-            👤
-          </div>
-
-          <div className="sidebar-user-details">
-
-            <strong>
-              {currentUser?.name ||
-                "User"}
-            </strong>
-
-            <small>
-              @{currentUser?.username ||
-                ""}
-            </small>
 
           </div>
 
         </div>
 
-        {/* ====================================
+        {/* =================================================
+            BUSINESS
+        ================================================= */}
+
+        <div className="sidebar-business">
+
+          <span>
+            BUSINESS
+          </span>
+
+          <strong>
+            Subasree Boutique
+          </strong>
+
+        </div>
+
+        {/* =================================================
             NAVIGATION
-        ==================================== */}
+        ================================================= */}
 
         <nav className="sidebar-nav">
-
-          {/* MAIN MENU */}
-
-          <p className="nav-section-title">
-            MAIN MENU
-          </p>
 
           {/* DASHBOARD */}
 
           <button
             className={
-              activePage ===
-              "Dashboard"
-                ? "sidebar-nav-item active"
-                : "sidebar-nav-item"
+              activePage === "Dashboard"
+                ? "nav-item active"
+                : "nav-item"
             }
             onClick={() =>
-              changePage(
-                "Dashboard"
-              )
+              changePage("Dashboard")
             }
           >
             <span className="nav-icon">
-              📊
+              🏠
             </span>
 
-            <span className="nav-text">
+            <span>
               Dashboard
             </span>
           </button>
@@ -383,8 +162,8 @@ function App() {
             className={
               activePage ===
               "Tailor Stitching"
-                ? "sidebar-nav-item active"
-                : "sidebar-nav-item"
+                ? "nav-item active"
+                : "nav-item"
             }
             onClick={() =>
               changePage(
@@ -396,8 +175,32 @@ function App() {
               ✂️
             </span>
 
-            <span className="nav-text">
+            <span>
               Tailor Stitching
+            </span>
+          </button>
+
+          {/* LINING STOCK */}
+
+          <button
+            className={
+              activePage ===
+              "Lining Stock"
+                ? "nav-item active"
+                : "nav-item"
+            }
+            onClick={() =>
+              changePage(
+                "Lining Stock"
+              )
+            }
+          >
+            <span className="nav-icon">
+              🧵
+            </span>
+
+            <span>
+              Lining Stock
             </span>
           </button>
 
@@ -407,8 +210,8 @@ function App() {
             className={
               activePage ===
               "Monthly Records"
-                ? "sidebar-nav-item active"
-                : "sidebar-nav-item"
+                ? "nav-item active"
+                : "nav-item"
             }
             onClick={() =>
               changePage(
@@ -417,44 +220,43 @@ function App() {
             }
           >
             <span className="nav-icon">
-              📅
+              📊
             </span>
 
-            <span className="nav-text">
+            <span>
               Monthly Records
             </span>
           </button>
 
         </nav>
 
-        {/* ====================================
-            SIDEBAR BOTTOM
-        ==================================== */}
+        {/* =================================================
+            SIDEBAR FOOTER
+        ================================================= */}
 
-        <div className="sidebar-bottom">
+        <div className="sidebar-footer">
 
-          <button
-            className="sidebar-logout"
-            onClick={
-              handleLogout
-            }
-          >
-            <span className="nav-icon">
-              🚪
+          <div className="footer-icon">
+            🧵
+          </div>
+
+          <div>
+            <strong>
+              Subasree Boutique
+            </strong>
+
+            <span>
+              Tailoring Management
             </span>
-
-            <span className="nav-text">
-              Logout
-            </span>
-          </button>
+          </div>
 
         </div>
 
       </aside>
 
-      {/* ======================================
+      {/* =================================================
           MOBILE OVERLAY
-      ======================================= */}
+      ================================================= */}
 
       {sidebarOpen && (
         <div
@@ -462,29 +264,16 @@ function App() {
           onClick={() =>
             setSidebarOpen(false)
           }
-        ></div>
+        />
       )}
 
-      {/* ======================================
+      {/* =================================================
           MAIN CONTENT
-      ======================================= */}
+      ================================================= */}
 
-      <main className="app-content">
+      <main className="app-main">
 
-        {activePage ===
-          "Dashboard" && (
-          <Dashboard />
-        )}
-
-        {activePage ===
-          "Tailor Stitching" && (
-          <TailorStitching />
-        )}
-
-        {activePage ===
-          "Monthly Records" && (
-          <MonthlyRecords />
-        )}
+        {renderPage()}
 
       </main>
 

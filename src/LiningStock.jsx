@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import "./LiningStock.css";
 
-const API_URL = "http://localhost:5000/api";
+// =====================================================
+// LOCAL STORAGE KEYS
+// =====================================================
+
+const STOCK_KEY = "liningStock";
+const SALES_KEY = "liningSales";
+
+// =====================================================
+// TODAY
+// =====================================================
 
 const getToday = () => {
   return new Date().toISOString().split("T")[0];
@@ -30,6 +39,38 @@ const getEmptySaleForm = () => ({
 });
 
 // =====================================================
+// SAFE LOCAL STORAGE
+// =====================================================
+
+const getLocalData = (key) => {
+  try {
+    const data = localStorage.getItem(key);
+
+    if (!data) {
+      return [];
+    }
+
+    const parsed = JSON.parse(data);
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error(
+      `Error reading ${key}:`,
+      error
+    );
+
+    return [];
+  }
+};
+
+const saveLocalData = (key, data) => {
+  localStorage.setItem(
+    key,
+    JSON.stringify(data)
+  );
+};
+
+// =====================================================
 // COMPONENT
 // =====================================================
 
@@ -45,98 +86,39 @@ function LiningStock() {
     getEmptySaleForm()
   );
 
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] =
+    useState(null);
 
-  const [loading, setLoading] = useState(false);
-  const [selling, setSelling] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [search, setSearch] = useState("");
+  const [selling, setSelling] =
+    useState(false);
 
-  const token = localStorage.getItem("token");
-
-  // =====================================================
-  // API REQUEST
-  // =====================================================
-
-  const apiRequest = async (
-    endpoint,
-    options = {}
-  ) => {
-    const response = await fetch(
-      `${API_URL}${endpoint}`,
-      {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          ...(options.headers || {}),
-        },
-      }
-    );
-
-    let data = {};
-
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data.message ||
-          "Something went wrong"
-      );
-    }
-
-    return data;
-  };
+  const [search, setSearch] =
+    useState("");
 
   // =====================================================
   // LOAD DATA
   // =====================================================
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
+  const loadData = () => {
+    const stockData =
+      getLocalData(STOCK_KEY);
 
-      const [stockData, salesData] =
-        await Promise.all([
-          apiRequest("/lining-stock"),
-          apiRequest("/lining-sold"),
-        ]);
+    const salesData =
+      getLocalData(SALES_KEY);
 
-      setStock(
-        Array.isArray(stockData)
-          ? stockData
-          : stockData.stock || []
-      );
-
-      setSales(
-        Array.isArray(salesData)
-          ? salesData
-          : salesData.sales || []
-      );
-    } catch (error) {
-      console.error(
-        "Load lining data error:",
-        error
-      );
-
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
+    setStock(stockData);
+    setSales(salesData);
   };
 
   // =====================================================
-  // LOAD WHEN PAGE OPENS
+  // PAGE OPEN
   // =====================================================
 
   useEffect(() => {
-    if (token) {
-      loadData();
-    }
+    loadData();
   }, []);
 
   // =====================================================
@@ -169,11 +151,8 @@ function LiningStock() {
   // ADD / UPDATE STOCK
   // =====================================================
 
-  const handleStockSubmit = async (e) => {
+  const handleStockSubmit = (e) => {
     e.preventDefault();
-
-    // IMPORTANT:
-    // Read directly from state
 
     const liningName = String(
       form.liningName ?? ""
@@ -191,30 +170,6 @@ function LiningStock() {
 
     const pricePerMeter = Number(
       form.pricePerMeter || 0
-    );
-
-    console.log(
-      "========== STOCK SUBMIT =========="
-    );
-
-    console.log(
-      "Full form:",
-      form
-    );
-
-    console.log(
-      "Lining Name:",
-      liningName
-    );
-
-    console.log(
-      "Colour:",
-      colour
-    );
-
-    console.log(
-      "Quantity:",
-      quantity
     );
 
     // =================================================
@@ -259,94 +214,98 @@ function LiningStock() {
     }
 
     // =================================================
-    // PAYLOAD
+    // STOCK OBJECT
     // =================================================
 
-    const payload = {
-      liningName: liningName,
-      colour: colour,
-      quantity: quantity,
+    const stockItem = {
+      id:
+        editingId !== null
+          ? editingId
+          : Date.now(),
+
+      liningName:
+        liningName,
+
+      colour:
+        colour,
+
+      quantity:
+        quantity,
+
       pricePerMeter:
         pricePerMeter,
+
       purchaseDate:
         form.purchaseDate ||
         getToday(),
-      notes: String(
-        form.notes || ""
-      ).trim(),
+
+      notes:
+        String(
+          form.notes || ""
+        ).trim(),
     };
 
-    console.log(
-      "Sending stock payload:",
-      payload
+    // =================================================
+    // UPDATE EXISTING STOCK
+    // =================================================
+
+    if (editingId !== null) {
+      const updatedStock =
+        stock.map((item) =>
+          Number(item.id) ===
+          Number(editingId)
+            ? stockItem
+            : item
+        );
+
+      saveLocalData(
+        STOCK_KEY,
+        updatedStock
+      );
+
+      setStock(updatedStock);
+
+      alert(
+        "Lining stock updated successfully"
+      );
+    }
+
+    // =================================================
+    // ADD NEW STOCK
+    // =================================================
+
+    else {
+      const updatedStock = [
+        ...stock,
+        stockItem,
+      ];
+
+      saveLocalData(
+        STOCK_KEY,
+        updatedStock
+      );
+
+      setStock(updatedStock);
+
+      alert(
+        "Lining stock added successfully"
+      );
+    }
+
+    // =================================================
+    // RESET
+    // =================================================
+
+    setForm(
+      getEmptyStockForm()
     );
 
-    // =================================================
-    // API
-    // =================================================
+    setEditingId(null);
 
-    try {
-      setLoading(true);
-
-      let result;
-
-      if (editingId !== null) {
-        result = await apiRequest(
-          `/lining-stock/${editingId}`,
-          {
-            method: "PUT",
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
-
-        alert(
-          "Lining stock updated successfully"
-        );
-      } else {
-        result = await apiRequest(
-          "/lining-stock",
-          {
-            method: "POST",
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
-
-        alert(
-          "Lining stock added successfully"
-        );
-      }
-
-      console.log(
-        "Stock API response:",
-        result
-      );
-
-      // RESET FORM
-
-      setForm(
-        getEmptyStockForm()
-      );
-
-      setEditingId(null);
-
-      // RELOAD DATABASE DATA
-
-      await loadData();
-
-    } catch (error) {
-      console.error(
-        "Save stock error:",
-        error
-      );
-
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
+    // Notify other components
+    window.dispatchEvent(
+      new Event("liningStockUpdated")
+    );
   };
 
   // =====================================================
@@ -354,11 +313,6 @@ function LiningStock() {
   // =====================================================
 
   const handleEdit = (item) => {
-    console.log(
-      "Editing stock:",
-      item
-    );
-
     setEditingId(item.id);
 
     setForm({
@@ -413,9 +367,7 @@ function LiningStock() {
   // DELETE STOCK
   // =====================================================
 
-  const handleDelete = async (
-    id
-  ) => {
+  const handleDelete = (id) => {
     const confirmDelete =
       window.confirm(
         "Are you sure you want to delete this lining stock?"
@@ -425,39 +377,34 @@ function LiningStock() {
       return;
     }
 
-    try {
-      setLoading(true);
-
-      await apiRequest(
-        `/lining-stock/${id}`,
-        {
-          method: "DELETE",
-        }
+    const updatedStock =
+      stock.filter(
+        (item) =>
+          Number(item.id) !==
+          Number(id)
       );
 
-      alert(
-        "Lining stock deleted successfully"
-      );
+    saveLocalData(
+      STOCK_KEY,
+      updatedStock
+    );
 
-      await loadData();
+    setStock(updatedStock);
 
-    } catch (error) {
-      console.error(
-        "Delete stock error:",
-        error
-      );
+    alert(
+      "Lining stock deleted successfully"
+    );
 
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
+    window.dispatchEvent(
+      new Event("liningStockUpdated")
+    );
   };
 
   // =====================================================
   // SELL LINING
   // =====================================================
 
-  const handleSale = async (e) => {
+  const handleSale = (e) => {
     e.preventDefault();
 
     const liningName = String(
@@ -472,25 +419,6 @@ function LiningStock() {
 
     const quantity = Number(
       saleForm.quantity
-    );
-
-    console.log(
-      "========== SELL =========="
-    );
-
-    console.log(
-      "Sale form:",
-      saleForm
-    );
-
-    console.log(
-      "Sale name:",
-      liningName
-    );
-
-    console.log(
-      "Sale colour:",
-      colour
     );
 
     // =================================================
@@ -523,7 +451,7 @@ function LiningStock() {
     }
 
     // =================================================
-    // FIND MATCHING STOCK
+    // FIND STOCK
     // =================================================
 
     const selectedStock =
@@ -554,10 +482,15 @@ function LiningStock() {
         );
       });
 
+    // =================================================
+    // STOCK NOT FOUND
+    // =================================================
+
     if (!selectedStock) {
       alert(
         "Lining stock not found. Please check Lining Name and Colour."
       );
+
       return;
     }
 
@@ -584,12 +517,57 @@ function LiningStock() {
     }
 
     // =================================================
-    // PAYLOAD
+    // PRICE
     // =================================================
 
-    const payload = {
-      stockId:
-        selectedStock.id,
+    const pricePerMeter =
+      Number(
+        selectedStock.pricePerMeter ??
+          selectedStock.price_per_meter ??
+          0
+      );
+
+    const saleAmount =
+      quantity * pricePerMeter;
+
+    // =================================================
+    // UPDATE STOCK
+    // =================================================
+
+    const remainingQuantity =
+      availableQuantity -
+      quantity;
+
+    const updatedStock =
+      stock.map((item) => {
+        if (
+          Number(item.id) ===
+          Number(selectedStock.id)
+        ) {
+          return {
+            ...item,
+
+            quantity:
+              remainingQuantity,
+          };
+        }
+
+        return item;
+      });
+
+    // =================================================
+    // CREATE SALE RECORD
+    // =================================================
+
+    const saleRecord = {
+      id: Date.now(),
+
+      saleId:
+        `SALE-${Date.now()}`,
+
+      saleDate:
+        saleForm.saleDate ||
+        getToday(),
 
       liningName:
         liningName,
@@ -600,9 +578,11 @@ function LiningStock() {
       quantity:
         quantity,
 
-      saleDate:
-        saleForm.saleDate ||
-        getToday(),
+      pricePerMeter:
+        pricePerMeter,
+
+      saleAmount:
+        saleAmount,
 
       customerName:
         String(
@@ -617,60 +597,52 @@ function LiningStock() {
         ).trim(),
     };
 
-    console.log(
-      "Sending sale payload:",
-      payload
+    // =================================================
+    // SAVE STOCK
+    // =================================================
+
+    saveLocalData(
+      STOCK_KEY,
+      updatedStock
     );
 
     // =================================================
-    // SELL API
+    // SAVE SALE
     // =================================================
 
-    try {
-      setSelling(true);
+    const updatedSales = [
+      ...sales,
+      saleRecord,
+    ];
 
-      const result =
-        await apiRequest(
-          "/lining-sold",
-          {
-            method: "POST",
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
+    saveLocalData(
+      SALES_KEY,
+      updatedSales
+    );
 
-      console.log(
-        "Sale response:",
-        result
-      );
+    // =================================================
+    // UPDATE UI
+    // =================================================
 
-      alert(
-        "Lining sold successfully"
-      );
+    setStock(updatedStock);
+    setSales(updatedSales);
 
-      // RESET SALE FORM
+    alert(
+      "Lining sold successfully"
+    );
 
-      setSaleForm(
-        getEmptySaleForm()
-      );
+    // =================================================
+    // RESET SALE FORM
+    // =================================================
 
-      // IMPORTANT:
-      // Reload stock from DATABASE.
-      // So reduced quantity is permanent.
+    setSaleForm(
+      getEmptySaleForm()
+    );
 
-      await loadData();
-
-    } catch (error) {
-      console.error(
-        "Sell lining error:",
-        error
-      );
-
-      alert(error.message);
-    } finally {
-      setSelling(false);
-    }
+    // Notify other components
+    window.dispatchEvent(
+      new Event("liningStockUpdated")
+    );
   };
 
   // =====================================================
@@ -739,33 +711,35 @@ function LiningStock() {
   // TOTAL STOCK
   // =====================================================
 
-  const totalStock = stock.reduce(
-    (total, item) => {
-      return (
-        total +
-        Number(
-          item.quantity || 0
-        )
-      );
-    },
-    0
-  );
+  const totalStock =
+    stock.reduce(
+      (total, item) => {
+        return (
+          total +
+          Number(
+            item.quantity || 0
+          )
+        );
+      },
+      0
+    );
 
   // =====================================================
   // TOTAL SOLD
   // =====================================================
 
-  const totalSold = sales.reduce(
-    (total, item) => {
-      return (
-        total +
-        Number(
-          item.quantity || 0
-        )
-      );
-    },
-    0
-  );
+  const totalSold =
+    sales.reduce(
+      (total, item) => {
+        return (
+          total +
+          Number(
+            item.quantity || 0
+          )
+        );
+      },
+      0
+    );
 
   // =====================================================
   // UI
@@ -779,7 +753,9 @@ function LiningStock() {
       ================================================= */}
 
       <div className="page-heading">
+
         <div>
+
           <h1>
             Lining Stock
           </h1>
@@ -788,7 +764,9 @@ function LiningStock() {
             Manage your lining
             stock and sales
           </p>
+
         </div>
+
       </div>
 
       {/* =================================================
@@ -798,6 +776,7 @@ function LiningStock() {
       <div className="page-stats">
 
         <div className="stat-card">
+
           <span>
             Total Stock
           </span>
@@ -805,9 +784,11 @@ function LiningStock() {
           <strong>
             {totalStock.toFixed(1)} m
           </strong>
+
         </div>
 
         <div className="stat-card">
+
           <span>
             Total Sold
           </span>
@@ -815,9 +796,11 @@ function LiningStock() {
           <strong>
             {totalSold.toFixed(1)} m
           </strong>
+
         </div>
 
         <div className="stat-card">
+
           <span>
             Stock Items
           </span>
@@ -825,9 +808,11 @@ function LiningStock() {
           <strong>
             {stock.length}
           </strong>
+
         </div>
 
         <div className="stat-card">
+
           <span>
             Sales
           </span>
@@ -835,6 +820,7 @@ function LiningStock() {
           <strong>
             {sales.length}
           </strong>
+
         </div>
 
       </div>
@@ -871,7 +857,8 @@ function LiningStock() {
                 type="text"
                 name="liningName"
                 value={
-                  form.liningName || ""
+                  form.liningName ||
+                  ""
                 }
                 onChange={
                   handleStockChange
@@ -894,7 +881,8 @@ function LiningStock() {
                 type="text"
                 name="colour"
                 value={
-                  form.colour || ""
+                  form.colour ||
+                  ""
                 }
                 onChange={
                   handleStockChange
@@ -1005,14 +993,17 @@ function LiningStock() {
               className="primary-btn"
               disabled={loading}
             >
+
               {loading
                 ? "Saving..."
                 : editingId !== null
                 ? "Update Stock"
                 : "Add Stock"}
+
             </button>
 
             {editingId !== null && (
+
               <button
                 type="button"
                 className="cancel-btn"
@@ -1022,6 +1013,7 @@ function LiningStock() {
               >
                 Cancel
               </button>
+
             )}
 
           </div>
@@ -1072,8 +1064,10 @@ function LiningStock() {
               <datalist
                 id="lining-name-list"
               >
+
                 {stock.map(
                   (item) => (
+
                     <option
                       key={
                         item.id
@@ -1084,8 +1078,10 @@ function LiningStock() {
                         ""
                       }
                     />
+
                   )
                 )}
+
               </datalist>
 
             </div>
@@ -1116,8 +1112,10 @@ function LiningStock() {
               <datalist
                 id="lining-colour-list"
               >
+
                 {stock.map(
                   (item) => (
+
                     <option
                       key={
                         `colour-${item.id}`
@@ -1128,8 +1126,10 @@ function LiningStock() {
                         ""
                       }
                     />
+
                   )
                 )}
+
               </datalist>
 
             </div>
@@ -1230,9 +1230,11 @@ function LiningStock() {
             className="primary-btn full-btn"
             disabled={selling}
           >
+
             {selling
               ? "Selling..."
               : "Sell Lining"}
+
           </button>
 
         </form>
@@ -1248,6 +1250,7 @@ function LiningStock() {
         <div className="table-header">
 
           <div>
+
             <h2>
               Lining Stock List
             </h2>
@@ -1261,6 +1264,7 @@ function LiningStock() {
                 : ""}{" "}
               found
             </p>
+
           </div>
 
           <input
@@ -1281,9 +1285,11 @@ function LiningStock() {
         0 ? (
 
           <div className="empty-text">
+
             {search
               ? "No matching lining found."
               : "No lining stock found."}
+
           </div>
 
         ) : (
@@ -1295,6 +1301,7 @@ function LiningStock() {
               <thead>
 
                 <tr>
+
                   <th>
                     Lining Name
                   </th>
@@ -1322,6 +1329,7 @@ function LiningStock() {
                   <th>
                     Actions
                   </th>
+
                 </tr>
 
               </thead>
@@ -1338,6 +1346,7 @@ function LiningStock() {
                       );
 
                     return (
+
                       <tr
                         key={
                           item.id
@@ -1367,33 +1376,41 @@ function LiningStock() {
                                 : "stock-status"
                             }
                           >
+
                             {quantity.toFixed(
                               1
                             )}{" "}
                             m
+
                           </span>
 
                         </td>
 
                         <td>
+
                           ₹
                           {Number(
                             item.price_per_meter ??
                               item.pricePerMeter ??
                               0
                           ).toFixed(2)}
+
                         </td>
 
                         <td>
+
                           {formatDate(
                             item.purchase_date ??
                               item.purchaseDate
                           )}
+
                         </td>
 
                         <td>
+
                           {item.notes ||
                             "-"}
+
                         </td>
 
                         <td>
@@ -1427,7 +1444,9 @@ function LiningStock() {
                         </td>
 
                       </tr>
+
                     );
+
                   }
                 )}
 
@@ -1436,6 +1455,7 @@ function LiningStock() {
             </table>
 
           </div>
+
         )}
 
       </div>
@@ -1455,11 +1475,13 @@ function LiningStock() {
             </h2>
 
             <p>
+
               {sales.length} sale
               {sales.length !==
               1
                 ? "s"
                 : ""}
+
             </p>
 
           </div>
@@ -1525,82 +1547,120 @@ function LiningStock() {
               <tbody>
 
                 {sales.map(
-                  (sale) => (
+                  (sale) => {
 
-                    <tr
-                      key={
-                        sale.id
-                      }
-                    >
+                    const saleName =
+                      sale.lining_name ??
+                      sale.liningName ??
+                      "-";
 
-                      <td>
-                        {sale.sale_id ||
-                          "-"}
-                      </td>
+                    const saleColour =
+                      sale.colour ??
+                      sale.color ??
+                      "-";
 
-                      <td>
-                        {formatDate(
-                          sale.sale_date ??
-                            sale.date
-                        )}
-                      </td>
+                    const salePrice =
+                      Number(
+                        sale.price_per_meter ??
+                          sale.pricePerMeter ??
+                          0
+                      );
 
-                      <td>
-                        {sale.lining_name ??
-                          sale.liningName ??
-                          "-"}
-                      </td>
+                    const saleAmount =
+                      Number(
+                        sale.sale_amount ??
+                          sale.saleAmount ??
+                          sale.amount ??
+                          0
+                      );
 
-                      <td>
-                        {sale.colour ??
-                          sale.color ??
-                          "-"}
-                      </td>
+                    const customer =
+                      sale.customer_name ??
+                      sale.customerName ??
+                      "-";
 
-                      <td>
-                        {Number(
-                          sale.quantity ||
-                            0
-                        ).toFixed(
-                          1
-                        )}{" "}
-                        m
-                      </td>
+                    return (
 
-                      <td>
-                        ₹
-                        {Number(
-                          sale.price_per_meter ||
-                            0
-                        ).toFixed(
-                          2
-                        )}
-                      </td>
+                      <tr
+                        key={
+                          sale.id
+                        }
+                      >
 
-                      <td>
-                        ₹
-                        {Number(
-                          sale.sale_amount ??
-                            sale.amount ??
-                            0
-                        ).toFixed(
-                          2
-                        )}
-                      </td>
+                        <td>
 
-                      <td>
-                        {sale.customer_name ||
-                          "-"}
-                      </td>
+                          {sale.sale_id ??
+                            sale.saleId ??
+                            "-"}
 
-                      <td>
-                        {sale.notes ||
-                          "-"}
-                      </td>
+                        </td>
 
-                    </tr>
+                        <td>
 
-                  )
+                          {formatDate(
+                            sale.sale_date ??
+                              sale.saleDate ??
+                              sale.date
+                          )}
+
+                        </td>
+
+                        <td>
+                          {saleName}
+                        </td>
+
+                        <td>
+                          {saleColour}
+                        </td>
+
+                        <td>
+
+                          {Number(
+                            sale.quantity ||
+                              0
+                          ).toFixed(
+                            1
+                          )}{" "}
+                          m
+
+                        </td>
+
+                        <td>
+
+                          ₹
+                          {salePrice.toFixed(
+                            2
+                          )}
+
+                        </td>
+
+                        <td>
+
+                          ₹
+                          {saleAmount.toFixed(
+                            2
+                          )}
+
+                        </td>
+
+                        <td>
+
+                          {customer}
+
+                        </td>
+
+                        <td>
+
+                          {sale.notes ||
+                            "-"}
+
+                        </td>
+
+                      </tr>
+
+                    );
+
+                  }
                 )}
 
               </tbody>
@@ -1608,6 +1668,7 @@ function LiningStock() {
             </table>
 
           </div>
+
         )}
 
       </div>

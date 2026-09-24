@@ -1,109 +1,32 @@
 import { useEffect, useState } from "react";
 import "./Dashboard.css";
 
-const API_URL = "http://localhost:5000/api";
-
 function Dashboard() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // ==========================================
-  // CONVERT BACKEND DATA
+  // LOAD ORDERS FROM LOCAL STORAGE
   // ==========================================
 
-  const formatOrder = (order) => ({
-    id: order.id,
-    orderId: order.order_id,
-
-    date: order.date,
-
-    customerName: order.customer_name || "",
-    dressName: order.dress_name || "",
-    dressType: order.dress_type || "",
-
-    quantity: Number(order.quantity || 0),
-
-    stitchingAmount: Number(
-      order.stitching_amount || 0
-    ),
-
-    status: order.status || "",
-
-    notes: order.notes || "",
-
-    completedDate:
-      order.completed_date || "",
-  });
-
-  // ==========================================
-  // LOAD USER'S ORDERS FROM DATABASE
-  // ==========================================
-
-  const loadData = async () => {
+  const loadData = () => {
     try {
-      setLoading(true);
+      const savedOrders =
+        localStorage.getItem("tailorOrders");
 
-      const token = localStorage.getItem("token");
+      if (savedOrders) {
+        const parsedOrders = JSON.parse(savedOrders);
 
-      if (!token) {
-        console.log("No login token found");
-        setOrders([]);
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}/orders`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        if (Array.isArray(parsedOrders)) {
+          setOrders(parsedOrders);
+        } else {
+          setOrders([]);
         }
-      );
-
-      // ======================================
-      // TOKEN INVALID
-      // ======================================
-
-      if (response.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("currentUser");
-
-        window.location.reload();
-        return;
+      } else {
+        setOrders([]);
       }
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to load orders"
-        );
-      }
-
-      const data = await response.json();
-
-      const backendOrders =
-        Array.isArray(data)
-          ? data
-          : Array.isArray(data.orders)
-          ? data.orders
-          : [];
-
-      const formattedOrders =
-        backendOrders.map(formatOrder);
-
-      setOrders(formattedOrders);
-
     } catch (error) {
-      console.error(
-        "Dashboard loading error:",
-        error
-      );
-
+      console.error("Error loading orders:", error);
       setOrders([]);
-
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -135,66 +58,51 @@ function Dashboard() {
   // TODAY
   // ==========================================
 
-  const today =
-    new Date()
-      .toISOString()
-      .split("T")[0];
+  const today = new Date()
+    .toISOString()
+    .split("T")[0];
 
   // ==========================================
-  // COMPLETED
+  // COMPLETED RECORDS
   // ==========================================
 
-  const completedRecords =
-    orders.filter(
-      (order) =>
-        order.status === "Completed"
-    );
+  const completedRecords = orders.filter(
+    (order) => order.status === "Completed"
+  );
 
-  const completedCount =
-    completedRecords.reduce(
-      (total, order) =>
-        total +
-        Number(order.quantity || 0),
-      0
-    );
+  const completedCount = completedRecords.reduce(
+    (total, order) =>
+      total + Number(order.quantity || 0),
+    0
+  );
 
   // ==========================================
   // GIVEN TO TAILOR
   // ==========================================
 
-  const givenToTailorRecords =
-    orders.filter(
-      (order) =>
-        order.status ===
-        "Given to Tailor"
-    );
+  const givenToTailorRecords = orders.filter(
+    (order) => order.status === "Given to Tailor"
+  );
 
-  const pendingCount =
-    givenToTailorRecords.reduce(
-      (total, order) =>
-        total +
-        Number(order.quantity || 0),
-      0
-    );
+  const pendingCount = givenToTailorRecords.reduce(
+    (total, order) =>
+      total + Number(order.quantity || 0),
+    0
+  );
 
   // ==========================================
   // STITCHING
   // ==========================================
 
-  const stitchingRecords =
-    orders.filter(
-      (order) =>
-        order.status ===
-        "Stitching"
-    );
+  const stitchingRecords = orders.filter(
+    (order) => order.status === "Stitching"
+  );
 
-  const stitchingCount =
-    stitchingRecords.reduce(
-      (total, order) =>
-        total +
-        Number(order.quantity || 0),
-      0
-    );
+  const stitchingCount = stitchingRecords.reduce(
+    (total, order) =>
+      total + Number(order.quantity || 0),
+    0
+  );
 
   // ==========================================
   // TOTAL CLOTHES
@@ -209,15 +117,12 @@ function Dashboard() {
   // TOTAL STITCHING AMOUNT
   // ==========================================
 
-  const totalAmount =
-    orders.reduce(
-      (total, order) =>
-        total +
-        Number(
-          order.stitchingAmount || 0
-        ),
-      0
-    );
+  const totalAmount = orders.reduce(
+    (total, order) =>
+      total +
+      Number(order.stitchingAmount || 0),
+    0
+  );
 
   // ==========================================
   // PENDING AMOUNT
@@ -227,9 +132,7 @@ function Dashboard() {
     givenToTailorRecords.reduce(
       (total, order) =>
         total +
-        Number(
-          order.stitchingAmount || 0
-        ),
+        Number(order.stitchingAmount || 0),
       0
     );
 
@@ -237,72 +140,59 @@ function Dashboard() {
   // TODAY ORDERS
   // ==========================================
 
-  const todayOrders =
-    orders.filter(
-      (order) =>
-        order.date === today &&
-        order.status !== "Completed"
-    );
+  const todayOrders = orders.filter(
+    (order) =>
+      order.date === today &&
+      order.status !== "Completed"
+  );
 
-  const todayCount =
-    todayOrders.reduce(
-      (total, order) =>
-        total +
-        Number(order.quantity || 0),
-      0
-    );
+  const todayCount = todayOrders.reduce(
+    (total, order) =>
+      total + Number(order.quantity || 0),
+    0
+  );
 
   // ==========================================
   // TODAY COMPLETED
   // ==========================================
 
-  const todayCompleted =
-    completedRecords
-      .filter(
-        (order) =>
-          order.completedDate === today
-      )
-      .reduce(
-        (total, order) =>
-          total +
-          Number(order.quantity || 0),
-        0
-      );
+  const todayCompleted = completedRecords
+    .filter(
+      (order) => order.completedDate === today
+    )
+    .reduce(
+      (total, order) =>
+        total + Number(order.quantity || 0),
+      0
+    );
 
   // ==========================================
   // RECENT ACTIVE RECORDS
   // ==========================================
 
-  const recentOrders =
-    [...orders]
-      .filter(
-        (order) =>
-          order.status !== "Completed"
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.date) -
-          new Date(a.date)
-      )
-      .slice(0, 6);
+  const recentOrders = [...orders]
+    .filter(
+      (order) => order.status !== "Completed"
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.date) - new Date(a.date)
+    )
+    .slice(0, 6);
 
   // ==========================================
   // ACTIVE ORDER COUNT
   // ==========================================
 
-  const activeOrderCount =
-    orders.filter(
-      (order) =>
-        order.status !== "Completed"
-    ).length;
+  const activeOrderCount = orders.filter(
+    (order) => order.status !== "Completed"
+  ).length;
 
   // ==========================================
   // STATUS CLASS
   // ==========================================
 
-  const getStatusClass = (
-    status
-  ) => {
+  const getStatusClass = (status) => {
     return String(status || "")
       .toLowerCase()
       .replaceAll(" ", "-");
@@ -317,43 +207,13 @@ function Dashboard() {
   };
 
   // ==========================================
-  // LOADING UI
-  // ==========================================
-
-  if (loading) {
-    return (
-      <div className="dashboard-page">
-
-        <div className="dashboard-empty">
-
-          <div>
-            🔄
-          </div>
-
-          <h3>
-            Loading Dashboard...
-          </h3>
-
-          <p>
-            Getting your records from database.
-          </p>
-
-        </div>
-
-      </div>
-    );
-  }
-
-  // ==========================================
-  // UI
+  // MAIN UI
   // ==========================================
 
   return (
     <div className="dashboard-page">
 
-      {/* ======================================
-          HEADER
-      ====================================== */}
+      {/* HEADER */}
 
       <div className="dashboard-header">
 
@@ -377,13 +237,11 @@ function Dashboard() {
       </div>
 
 
-      {/* ======================================
-          MAIN STATS
-      ====================================== */}
+      {/* MAIN STATS */}
 
       <div className="dashboard-stats">
 
-        {/* TOTAL */}
+        {/* TOTAL CLOTHES */}
 
         <div className="dashboard-card">
 
@@ -485,9 +343,7 @@ function Dashboard() {
       </div>
 
 
-      {/* ======================================
-          SECONDARY STATS
-      ====================================== */}
+      {/* SECONDARY STATS */}
 
       <div className="secondary-stats">
 
@@ -519,16 +375,13 @@ function Dashboard() {
       </div>
 
 
-      {/* ======================================
-          TODAY SECTION
-      ====================================== */}
+      {/* TODAY SECTION */}
 
       <div className="today-section">
 
         <div className="section-title">
 
           <div>
-
             <h2>
               📅 Today's Summary
             </h2>
@@ -536,7 +389,6 @@ function Dashboard() {
             <p>
               {today}
             </p>
-
           </div>
 
         </div>
@@ -587,16 +439,13 @@ function Dashboard() {
       </div>
 
 
-      {/* ======================================
-          RECENT RECORDS
-      ====================================== */}
+      {/* RECENT RECORDS */}
 
       <div className="recent-section">
 
         <div className="section-title">
 
           <div>
-
             <h2>
               🧵 Recent Tailor Records
             </h2>
@@ -604,7 +453,6 @@ function Dashboard() {
             <p>
               Active stitching records
             </p>
-
           </div>
 
         </div>
@@ -623,8 +471,8 @@ function Dashboard() {
             </h3>
 
             <p>
-              Completed records are available
-              in Monthly Records.
+              Add tailoring records from
+              Tailor Stitching.
             </p>
 
           </div>
@@ -670,59 +518,54 @@ function Dashboard() {
 
               <tbody>
 
-                {recentOrders.map(
-                  (order) => (
+                {recentOrders.map((order) => (
 
-                    <tr
-                      key={order.id}
-                    >
+                  <tr key={order.id}>
 
-                      <td>
-                        {order.date}
-                      </td>
+                    <td>
+                      {order.date}
+                    </td>
 
-                      <td>
-                        {order.customerName ||
-                          "Walk-in"}
-                      </td>
+                    <td>
+                      {order.customerName ||
+                        "Walk-in"}
+                    </td>
 
-                      <td>
-                        <strong>
-                          {order.dressName}
-                        </strong>
-                      </td>
+                    <td>
+                      <strong>
+                        {order.dressName}
+                      </strong>
+                    </td>
 
-                      <td>
-                        {order.quantity}
-                      </td>
+                    <td>
+                      {order.quantity}
+                    </td>
 
-                      <td>
-                        ₹
-                        {Number(
-                          order.stitchingAmount ||
-                            0
-                        )}
-                      </td>
+                    <td>
+                      ₹
+                      {Number(
+                        order.stitchingAmount || 0
+                      )}
+                    </td>
 
-                      <td>
+                    <td>
 
-                        <span
-                          className={
-                            "dashboard-status " +
-                            getStatusClass(
-                              order.status
-                            )
-                          }
-                        >
-                          {order.status}
-                        </span>
+                      <span
+                        className={
+                          "dashboard-status " +
+                          getStatusClass(
+                            order.status
+                          )
+                        }
+                      >
+                        {order.status}
+                      </span>
 
-                      </td>
+                    </td>
 
-                    </tr>
+                  </tr>
 
-                  )
-                )}
+                ))}
 
               </tbody>
 
@@ -735,9 +578,7 @@ function Dashboard() {
       </div>
 
 
-      {/* ======================================
-          QUICK SUMMARY
-      ====================================== */}
+      {/* QUICK SUMMARY */}
 
       <div className="quick-summary">
 

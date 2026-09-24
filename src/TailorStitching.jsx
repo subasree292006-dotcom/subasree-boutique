@@ -1,329 +1,234 @@
-import {
-  useEffect,
-  useState,
-} from "react";
-
+import { useEffect, useState } from "react";
 import "./TailorStitching.css";
 
-const API_URL =
-  "http://localhost:5000/api";
-
 function TailorStitching() {
-  // ===================================================
-  // TODAY
-  // ===================================================
+  // ==========================================
+  // TODAY DATE
+  // ==========================================
 
-  const getToday = () =>
-    new Date()
-      .toISOString()
-      .split("T")[0];
+  const getToday = () => {
+    return new Date().toISOString().split("T")[0];
+  };
 
-  // ===================================================
-  // FORM
-  // ===================================================
+  // ==========================================
+  // EMPTY FORM
+  // ==========================================
 
-  const createEmptyForm = () => ({
+  const emptyForm = {
     date: getToday(),
-
     customerName: "",
-
     dressName: "",
-
     dressType: "Blouse",
-
     quantity: 1,
-
     stitchingAmount: "",
-
-    liningName: "",
-
-    liningColour: "",
-
     liningUsed: "",
-
+    liningName: "",
+    liningColour: "",
     status: "Given to Tailor",
-
     notes: "",
-  });
+  };
 
-  const [form, setForm] =
-    useState(createEmptyForm());
+  // ==========================================
+  // STATES
+  // ==========================================
 
-  const [orders, setOrders] =
+  const [orders, setOrders] = useState([]);
+
+  const [monthlyRecords, setMonthlyRecords] =
     useState([]);
 
-  const [
-    liningStock,
-    setLiningStock,
-  ] = useState([]);
+  const [liningStock, setLiningStock] =
+    useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [
-    editingId,
-    setEditingId,
-  ] = useState(null);
+  const [form, setForm] =
+    useState(emptyForm);
 
   const [search, setSearch] =
     useState("");
 
-  // ===================================================
-  // TOKEN
-  // ===================================================
+  const [editingId, setEditingId] =
+    useState(null);
 
-  const getToken = () =>
-    localStorage.getItem("token");
+  const [saving, setSaving] =
+    useState(false);
 
-  // ===================================================
-  // API REQUEST
-  // ===================================================
-
-  const apiRequest = async (
-    path,
-    options = {}
-  ) => {
-    const token = getToken();
-
-    if (!token) {
-      throw new Error(
-        "Please login again"
-      );
-    }
-
-    const response =
-      await fetch(
-        `${API_URL}${path}`,
-        {
-          ...options,
-
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization:
-              `Bearer ${token}`,
-
-            ...(options.headers || {}),
-          },
-        }
-      );
-
-    let data = {};
-
-    try {
-      data =
-        await response.json();
-    } catch {
-      data = {};
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data.message ||
-          "Something went wrong"
-      );
-    }
-
-    return data;
-  };
-
-  // ===================================================
-  // MAP STOCK
-  // ===================================================
-
-  const mapStock = (item) => ({
-    id: Number(item.id),
-
-    stockId:
-      item.stock_id || "",
-
-    liningName:
-      item.lining_name || "",
-
-    colour:
-      item.colour ||
-      item.color ||
-      "",
-
-    quantity:
-      Number(
-        item.quantity || 0
-      ),
-
-    pricePerMeter:
-      Number(
-        item.price_per_meter ||
-          0
-      ),
-
-    purchaseDate:
-      item.purchase_date || "",
-
-    notes:
-      item.notes || "",
-  });
-
-  // ===================================================
-  // MAP ORDER
-  // ===================================================
-
-  const mapOrder = (order) => ({
-    id: Number(order.id),
-
-    orderId:
-      order.order_id || "",
-
-    date:
-      order.date || "",
-
-    customerName:
-      order.customer_name || "",
-
-    dressName:
-      order.dress_name || "",
-
-    dressType:
-      order.dress_type ||
-      "Blouse",
-
-    quantity:
-      Number(
-        order.quantity || 0
-      ),
-
-    stitchingAmount:
-      Number(
-        order.stitching_amount ||
-          0
-      ),
-
-    liningName:
-      order.lining_name || "",
-
-    liningColour:
-      order.lining_color || "",
-
-    liningUsed:
-      Number(
-        order.lining_used || 0
-      ),
-
-    status:
-      order.status ||
-      "Given to Tailor",
-
-    notes:
-      order.notes || "",
-
-    completedDate:
-      order.completed_date ||
-      null,
-  });
-
-  // ===================================================
-  // LOAD ORDERS
-  // ===================================================
-
-  const loadOrders =
-    async () => {
-      const data =
-        await apiRequest(
-          "/orders",
-          {
-            method: "GET",
-          }
-        );
-
-      const list =
-        Array.isArray(data)
-          ? data
-          : data.orders || [];
-
-      setOrders(
-        list.map(mapOrder)
-      );
-    };
-
-  // ===================================================
-  // LOAD STOCK FROM SQLITE
-  // ===================================================
-
-  const loadLiningStock =
-    async () => {
-      const data =
-        await apiRequest(
-          "/lining-stock",
-          {
-            method: "GET",
-          }
-        );
-
-      const list =
-        Array.isArray(data)
-          ? data
-          : [];
-
-      setLiningStock(
-        list.map(mapStock)
-      );
-    };
-
-  // ===================================================
-  // INITIAL LOAD
-  // ===================================================
+  // ==========================================
+  // LOAD ALL DATA
+  // ==========================================
 
   useEffect(() => {
-    const loadEverything =
-      async () => {
-        try {
-          setLoading(true);
-
-          await Promise.all([
-            loadOrders(),
-            loadLiningStock(),
-          ]);
-        } catch (error) {
-          console.error(
-            "LOAD ERROR:",
-            error
-          );
-
-          alert(error.message);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-    loadEverything();
+    loadLiningStock();
+    loadMonthlyRecords();
+    loadOrders();
   }, []);
 
-  // ===================================================
-  // FIND STOCK
-  // ===================================================
+  // ==========================================
+  // LOAD ORDERS
+  // ==========================================
+
+  const loadOrders = () => {
+    try {
+      const savedOrders =
+        localStorage.getItem(
+          "tailorOrders"
+        );
+
+      if (!savedOrders) {
+        setOrders([]);
+        return;
+      }
+
+      const parsedOrders =
+        JSON.parse(savedOrders);
+
+      if (Array.isArray(parsedOrders)) {
+        setOrders(parsedOrders);
+
+        // IMPORTANT:
+        // Existing completed orders
+        // will be synced to Monthly Records
+        syncCompletedOrdersToMonthly(
+          parsedOrders
+        );
+      } else {
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error(
+        "Error loading orders:",
+        error
+      );
+
+      setOrders([]);
+    }
+  };
+
+  // ==========================================
+  // LOAD MONTHLY RECORDS
+  // ==========================================
+
+  const loadMonthlyRecords = () => {
+    try {
+      const saved =
+        localStorage.getItem(
+          "monthlyRecords"
+        );
+
+      if (!saved) {
+        setMonthlyRecords([]);
+        return;
+      }
+
+      const parsed =
+        JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        setMonthlyRecords(parsed);
+      } else {
+        setMonthlyRecords([]);
+      }
+    } catch (error) {
+      console.error(
+        "Error loading monthly records:",
+        error
+      );
+
+      setMonthlyRecords([]);
+    }
+  };
+
+  // ==========================================
+  // LOAD LINING STOCK
+  // ==========================================
+
+  const loadLiningStock = () => {
+    try {
+      const savedStock =
+        localStorage.getItem(
+          "liningStock"
+        );
+
+      if (savedStock) {
+        const parsedStock =
+          JSON.parse(savedStock);
+
+        if (Array.isArray(parsedStock)) {
+          setLiningStock(parsedStock);
+        } else {
+          setLiningStock([]);
+        }
+      } else {
+        setLiningStock([]);
+      }
+    } catch (error) {
+      console.error(
+        "Error loading lining stock:",
+        error
+      );
+
+      setLiningStock([]);
+    }
+  };
+
+  // ==========================================
+  // SAVE ORDERS
+  // ==========================================
+
+  const saveOrders = (data) => {
+    try {
+      localStorage.setItem(
+        "tailorOrders",
+        JSON.stringify(data)
+      );
+    } catch (error) {
+      console.error(
+        "Error saving orders:",
+        error
+      );
+    }
+  };
+
+  // ==========================================
+  // SAVE LINING STOCK
+  // ==========================================
+
+  const saveLiningStock = (data) => {
+    try {
+      localStorage.setItem(
+        "liningStock",
+        JSON.stringify(data)
+      );
+    } catch (error) {
+      console.error(
+        "Error saving lining stock:",
+        error
+      );
+    }
+  };
+
+  // ==========================================
+  // FIND LINING STOCK
+  // ==========================================
 
   const findLiningStock = (
-    name,
-    colour
+    liningName,
+    colour,
+    stock = liningStock
   ) => {
-    if (
-      !name ||
-      !colour
-    ) {
+    if (!liningName || !colour) {
       return null;
     }
 
-    return liningStock.find(
+    return stock.find(
       (item) =>
         String(
           item.liningName || ""
         )
           .trim()
           .toLowerCase() ===
-          String(name)
+          String(liningName)
             .trim()
             .toLowerCase() &&
-
         String(
           item.colour || ""
         )
@@ -335,30 +240,24 @@ function TailorStitching() {
     );
   };
 
-  // ===================================================
-  // ADJUST SQLITE STOCK
-  // ===================================================
+  // ==========================================
+  // UPDATE LINING STOCK
+  // ==========================================
 
-  const adjustStock =
-    async (
-      stockId,
-      change
-    ) => {
-      return await apiRequest(
-        `/lining-stock/${stockId}/adjust`,
-        {
-          method: "PATCH",
+  const updateLiningStock = (
+    newStock
+  ) => {
+    setLiningStock(newStock);
+    saveLiningStock(newStock);
 
-          body: JSON.stringify({
-            change,
-          }),
-        }
-      );
-    };
+    window.dispatchEvent(
+      new Event("liningStockUpdated")
+    );
+  };
 
-  // ===================================================
-  // CHANGE
-  // ===================================================
+  // ==========================================
+  // FORM CHANGE
+  // ==========================================
 
   const handleChange = (e) => {
     const {
@@ -366,160 +265,411 @@ function TailorStitching() {
       value,
     } = e.target;
 
-    // If lining name changes,
-    // reset colour.
-
-    if (
-      name === "liningName"
-    ) {
-      setForm((previous) => ({
-        ...previous,
-
-        liningName: value,
-
-        liningColour: "",
-      }));
-
-      return;
-    }
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm(
+      (previousForm) => ({
+        ...previousForm,
+        [name]: value,
+      })
+    );
   };
 
-  // ===================================================
-  // RESET
-  // ===================================================
+  // ==========================================
+  // RESET FORM
+  // ==========================================
 
   const resetForm = () => {
     setEditingId(null);
 
-    setForm(
-      createEmptyForm()
-    );
+    setForm({
+      ...emptyForm,
+      date: getToday(),
+    });
   };
 
-  // ===================================================
-  // ORDER PAYLOAD
-  // ===================================================
+  // ==========================================
+  // SAVE MONTHLY RECORD
+  // ==========================================
 
-  const createPayload = (
-    order,
-    oldOrderId = null
-  ) => ({
-    order_id:
-      oldOrderId ||
-      order.orderId ||
-      `ORD-${Date.now()}`,
-
-    date:
-      order.date || "",
-
-    customer_name:
-      order.customerName || "",
-
-    dress_name:
-      order.dressName || "",
-
-    dress_type:
-      order.dressType ||
-      "Blouse",
-
-    quantity:
-      Number(
-        order.quantity || 1
-      ),
-
-    stitching_amount:
-      Number(
-        order.stitchingAmount ||
-          0
-      ),
-
-    lining_name:
-      order.liningName || "",
-
-    lining_color:
-      order.liningColour || "",
-
-    lining_used:
-      Number(
-        order.liningUsed || 0
-      ),
-
-    status:
-      order.status ||
-      "Given to Tailor",
-
-    notes:
-      order.notes || "",
-
-    completed_date:
-      order.completedDate ||
-      null,
-  });
-
-  // ===================================================
-  // LOCAL MONTHLY SNAPSHOT
-  // ===================================================
-
-  const saveMonthlyRecordLocal =
-    (order) => {
-      try {
-        const oldData =
-          JSON.parse(
-            localStorage.getItem(
-              "monthlyRecords"
-            ) || "[]"
-          );
-
-        const exists =
-          oldData.some(
-            (item) =>
-              String(item.id) ===
-              String(order.id)
-          );
-
-        if (exists) {
-          return;
-        }
-
-        const record = {
-          ...order,
-
-          completedDate:
-            order.completedDate ||
-            getToday(),
-        };
-
-        localStorage.setItem(
-          "monthlyRecords",
-
-          JSON.stringify([
-            record,
-            ...oldData,
-          ])
+  const saveMonthlyRecordLocal = (
+    order
+  ) => {
+    try {
+      const saved =
+        localStorage.getItem(
+          "monthlyRecords"
         );
-      } catch (error) {
-        console.error(
-          "MONTHLY ERROR:",
-          error
+
+      let monthlyRecords = saved
+        ? JSON.parse(saved)
+        : [];
+
+      if (
+        !Array.isArray(
+          monthlyRecords
+        )
+      ) {
+        monthlyRecords = [];
+      }
+
+      const existingIndex =
+        monthlyRecords.findIndex(
+          (record) =>
+            String(record.id) ===
+            String(order.id)
+        );
+
+      const completedDate =
+        order.completedDate ||
+        getToday();
+
+      const completedRecord = {
+        id: order.id,
+
+        orderId:
+          order.orderId ||
+          `ORD-${order.id}`,
+
+        date:
+          order.date || "",
+
+        customerName:
+          order.customerName || "",
+
+        dressName:
+          order.dressName || "",
+
+        dressType:
+          order.dressType ||
+          "Blouse",
+
+        quantity:
+          Number(
+            order.quantity || 0
+          ),
+
+        stitchingAmount:
+          Number(
+            order.stitchingAmount || 0
+          ),
+
+        liningUsed:
+          Number(
+            order.liningUsed || 0
+          ),
+
+        liningName:
+          order.liningName || "",
+
+        liningColour:
+          order.liningColour || "",
+
+        status: "Completed",
+
+        notes:
+          order.notes || "",
+
+        completedDate,
+
+        completedMonth:
+          completedDate.slice(0, 7),
+      };
+
+      if (
+        existingIndex !== -1
+      ) {
+        monthlyRecords[
+          existingIndex
+        ] = completedRecord;
+      } else {
+        monthlyRecords.unshift(
+          completedRecord
         );
       }
-    };
 
-  // ===================================================
-  // SUBMIT
-  // ===================================================
+      localStorage.setItem(
+        "monthlyRecords",
+        JSON.stringify(
+          monthlyRecords
+        )
+      );
 
-  const handleSubmit =
-    async (e) => {
-      e.preventDefault();
+      // Update state immediately
+      setMonthlyRecords(
+        monthlyRecords
+      );
 
-      const dressName =
-        form.dressName.trim();
+      // Tell Monthly Records page
+      window.dispatchEvent(
+        new Event(
+          "monthlyRecordsUpdated"
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Monthly record error:",
+        error
+      );
+    }
+  };
+
+  // ==========================================
+  // SYNC EXISTING COMPLETED ORDERS
+  // TO MONTHLY RECORDS
+  // ==========================================
+
+  const syncCompletedOrdersToMonthly = (
+    allOrders
+  ) => {
+    try {
+      const saved =
+        localStorage.getItem(
+          "monthlyRecords"
+        );
+
+      let records = saved
+        ? JSON.parse(saved)
+        : [];
+
+      if (
+        !Array.isArray(records)
+      ) {
+        records = [];
+      }
+
+      const completedOrders =
+        allOrders.filter(
+          (order) =>
+            String(
+              order.status || ""
+            ).toLowerCase() ===
+            "completed"
+        );
+
+      let changed = false;
+
+      completedOrders.forEach(
+        (order) => {
+          const existingIndex =
+            records.findIndex(
+              (record) =>
+                String(
+                  record.id
+                ) ===
+                String(order.id)
+            );
+
+          const completedDate =
+            order.completedDate ||
+            getToday();
+
+          const completedRecord = {
+            id: order.id,
+
+            orderId:
+              order.orderId ||
+              `ORD-${order.id}`,
+
+            date:
+              order.date || "",
+
+            customerName:
+              order.customerName ||
+              "",
+
+            dressName:
+              order.dressName ||
+              "",
+
+            dressType:
+              order.dressType ||
+              "Blouse",
+
+            quantity:
+              Number(
+                order.quantity || 0
+              ),
+
+            stitchingAmount:
+              Number(
+                order.stitchingAmount ||
+                  0
+              ),
+
+            liningUsed:
+              Number(
+                order.liningUsed || 0
+              ),
+
+            liningName:
+              order.liningName ||
+              "",
+
+            liningColour:
+              order.liningColour ||
+              "",
+
+            status: "Completed",
+
+            notes:
+              order.notes || "",
+
+            completedDate,
+
+            completedMonth:
+              completedDate.slice(
+                0,
+                7
+              ),
+          };
+
+          if (
+            existingIndex === -1
+          ) {
+            records.unshift(
+              completedRecord
+            );
+
+            changed = true;
+          } else {
+            // Update existing record
+            // so quantity / amount changes
+            // are reflected
+            records[
+              existingIndex
+            ] = completedRecord;
+
+            changed = true;
+          }
+        }
+      );
+
+      if (changed) {
+        localStorage.setItem(
+          "monthlyRecords",
+          JSON.stringify(records)
+        );
+
+        setMonthlyRecords(
+          records
+        );
+
+        window.dispatchEvent(
+          new Event(
+            "monthlyRecordsUpdated"
+          )
+        );
+      } else {
+        setMonthlyRecords(
+          records
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error syncing completed orders:",
+        error
+      );
+    }
+  };
+
+  // ==========================================
+  // REMOVE MONTHLY RECORD
+  // ==========================================
+
+  const removeMonthlyRecord = (
+    orderId
+  ) => {
+    try {
+      const saved =
+        localStorage.getItem(
+          "monthlyRecords"
+        );
+
+      if (!saved) {
+        return;
+      }
+
+      let monthlyRecords =
+        JSON.parse(saved);
+
+      if (
+        !Array.isArray(
+          monthlyRecords
+        )
+      ) {
+        return;
+      }
+
+      monthlyRecords =
+        monthlyRecords.filter(
+          (record) =>
+            String(record.id) !==
+            String(orderId)
+        );
+
+      localStorage.setItem(
+        "monthlyRecords",
+        JSON.stringify(
+          monthlyRecords
+        )
+      );
+
+      setMonthlyRecords(
+        monthlyRecords
+      );
+
+      window.dispatchEvent(
+        new Event(
+          "monthlyRecordsUpdated"
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Error removing monthly record:",
+        error
+      );
+    }
+  };
+
+  // ==========================================
+  // ADD / UPDATE
+  // ==========================================
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (saving) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // ========================================
+      // VALIDATION
+      // ========================================
+
+      if (
+        !form.dressName.trim()
+      ) {
+        alert(
+          "Please enter Dress Name"
+        );
+
+        setSaving(false);
+        return;
+      }
+
+      if (
+        form.stitchingAmount ===
+        ""
+      ) {
+        alert(
+          "Please enter Stitching Amount"
+        );
+
+        setSaving(false);
+        return;
+      }
 
       const quantity =
         Number(
@@ -543,190 +693,251 @@ function TailorStitching() {
       const liningColour =
         form.liningColour.trim();
 
-      // ===============================================
-      // VALIDATION
-      // ===============================================
+      // ========================================
+      // QUANTITY VALIDATION
+      // ========================================
 
-      if (!dressName) {
-        alert(
-          "Please enter Dress Name"
-        );
-
-        return;
-      }
-
-      if (
-        form.stitchingAmount ===
-        ""
-      ) {
-        alert(
-          "Please enter Stitching Amount"
-        );
-
-        return;
-      }
-
-      if (
-        !Number.isFinite(
-          quantity
-        ) ||
-        quantity <= 0
-      ) {
+      if (quantity <= 0) {
         alert(
           "Quantity must be greater than 0"
         );
 
+        setSaving(false);
         return;
       }
 
+      // ========================================
+      // AMOUNT VALIDATION
+      // ========================================
+
       if (
-        !Number.isFinite(
-          stitchingAmount
-        ) ||
         stitchingAmount < 0
       ) {
         alert(
-          "Invalid stitching amount"
+          "Stitching amount cannot be negative"
         );
 
+        setSaving(false);
         return;
       }
 
-      if (
-        !Number.isFinite(
-          liningUsed
-        ) ||
-        liningUsed < 0
-      ) {
+      // ========================================
+      // LINING VALIDATION
+      // ========================================
+
+      if (liningUsed < 0) {
         alert(
-          "Invalid lining quantity"
+          "Lining quantity cannot be negative"
         );
 
+        setSaving(false);
         return;
       }
 
-      // ===============================================
-      // FIND NEW LINING
-      // ===============================================
-
-      let newStockItem = null;
-
-      if (liningUsed > 0) {
-        if (
-          !liningName ||
-          !liningColour
-        ) {
-          alert(
-            "Please select Lining Name and Colour"
-          );
-
-          return;
-        }
-
-        newStockItem =
-          findLiningStock(
-            liningName,
-            liningColour
-          );
-
-        if (!newStockItem) {
-          alert(
-            "Selected lining is not available in stock"
-          );
-
-          return;
-        }
-      }
-
-      // ===============================================
-      // UPDATE EXISTING ORDER
-      // ===============================================
+      // ========================================
+      // EDIT EXISTING ORDER
+      // ========================================
 
       if (
         editingId !== null
       ) {
         const oldOrder =
           orders.find(
-            (item) =>
-              item.id ===
-              editingId
+            (order) =>
+              String(
+                order.id
+              ) ===
+              String(
+                editingId
+              )
           );
 
         if (!oldOrder) {
           alert(
-            "Order not found"
+            "Record not found"
           );
 
+          setSaving(false);
           return;
         }
 
-        const oldUsed =
+        // ======================================
+        // WORKING STOCK
+        // ======================================
+
+        let workingStock = [
+          ...liningStock,
+        ];
+
+        // ======================================
+        // RETURN OLD LINING
+        // ======================================
+
+        const oldLiningUsed =
           Number(
             oldOrder.liningUsed ||
               0
           );
 
-        const oldStockItem =
-          oldUsed > 0
-            ? findLiningStock(
-                oldOrder.liningName,
-                oldOrder.liningColour
-              )
-            : null;
-
-        // =============================================
-        // AVAILABLE STOCK CALCULATION
-        // If editing same lining, old quantity will
-        // first come back.
-        // =============================================
-
-        let availableForNew =
-          newStockItem
-            ? Number(
-                newStockItem.quantity ||
-                  0
-              )
-            : 0;
-
         if (
-          oldStockItem &&
-          newStockItem &&
-          oldStockItem.id ===
-            newStockItem.id
+          oldLiningUsed > 0 &&
+          oldOrder.liningName &&
+          oldOrder.liningColour
         ) {
-          availableForNew +=
-            oldUsed;
+          workingStock =
+            workingStock.map(
+              (item) => {
+                const sameName =
+                  String(
+                    item.liningName ||
+                      ""
+                  )
+                    .trim()
+                    .toLowerCase() ===
+                  String(
+                    oldOrder.liningName ||
+                      ""
+                  )
+                    .trim()
+                    .toLowerCase();
+
+                const sameColour =
+                  String(
+                    item.colour || ""
+                  )
+                    .trim()
+                    .toLowerCase() ===
+                  String(
+                    oldOrder.liningColour ||
+                      ""
+                  )
+                    .trim()
+                    .toLowerCase();
+
+                if (
+                  sameName &&
+                  sameColour
+                ) {
+                  return {
+                    ...item,
+
+                    quantity:
+                      Number(
+                        item.quantity ||
+                          0
+                      ) +
+                      oldLiningUsed,
+                  };
+                }
+
+                return item;
+              }
+            );
         }
 
-        if (
-          liningUsed >
-          availableForNew
-        ) {
-          alert(
-            `Only ${availableForNew.toFixed(
-              1
-            )}m available`
-          );
+        // ======================================
+        // USE NEW LINING
+        // ======================================
 
-          return;
+        if (
+          liningUsed > 0 &&
+          liningName &&
+          liningColour
+        ) {
+          const newLiningItem =
+            findLiningStock(
+              liningName,
+              liningColour,
+              workingStock
+            );
+
+          if (!newLiningItem) {
+            alert(
+              "Selected lining is not available in stock."
+            );
+
+            setSaving(false);
+            return;
+          }
+
+          const available =
+            Number(
+              newLiningItem.quantity ||
+                0
+            );
+
+          if (
+            liningUsed >
+            available
+          ) {
+            alert(
+              `Only ${available.toFixed(
+                1
+              )}m available in lining stock.`
+            );
+
+            setSaving(false);
+            return;
+          }
+
+          workingStock =
+            workingStock.map(
+              (item) => {
+                if (
+                  item.id ===
+                  newLiningItem.id
+                ) {
+                  return {
+                    ...item,
+
+                    quantity:
+                      Number(
+                        item.quantity ||
+                          0
+                      ) -
+                      liningUsed,
+                  };
+                }
+
+                return item;
+              }
+            );
         }
 
-        const completedDate =
+        // ======================================
+        // COMPLETED DATE
+        // ======================================
+
+        let completedDate =
+          oldOrder.completedDate ||
+          null;
+
+        if (
           form.status ===
           "Completed"
-            ? oldOrder.completedDate ||
-              getToday()
-            : null;
+        ) {
+          completedDate =
+            oldOrder.completedDate ||
+            getToday();
+        } else {
+          completedDate = null;
+        }
+
+        // ======================================
+        // UPDATED ORDER
+        // ======================================
 
         const updatedOrder = {
           ...oldOrder,
 
-          date: form.date,
+          date:
+            form.date,
 
           customerName:
             form.customerName.trim(),
 
-          dressName,
+          dressName:
+            form.dressName.trim(),
 
           dressType:
             form.dressType,
@@ -735,11 +946,11 @@ function TailorStitching() {
 
           stitchingAmount,
 
+          liningUsed,
+
           liningName,
 
           liningColour,
-
-          liningUsed,
 
           status:
             form.status,
@@ -750,167 +961,95 @@ function TailorStitching() {
           completedDate,
         };
 
-        let returnedOld =
-          false;
+        // ======================================
+        // UPDATE ORDERS
+        // ======================================
 
-        let reducedNew =
-          false;
-
-        try {
-          // ===========================================
-          // RETURN OLD STOCK TO SQLITE
-          // ===========================================
-
-          if (
-            oldUsed > 0 &&
-            oldStockItem
-          ) {
-            await adjustStock(
-              oldStockItem.id,
-              oldUsed
-            );
-
-            returnedOld =
-              true;
-          }
-
-          // ===========================================
-          // REDUCE NEW STOCK FROM SQLITE
-          // ===========================================
-
-          if (
-            liningUsed > 0 &&
-            newStockItem
-          ) {
-            await adjustStock(
-              newStockItem.id,
-              -liningUsed
-            );
-
-            reducedNew =
-              true;
-          }
-
-          // ===========================================
-          // UPDATE ORDER
-          // ===========================================
-
-          await apiRequest(
-            `/orders/${editingId}`,
-            {
-              method: "PUT",
-
-              body:
-                JSON.stringify(
-                  createPayload(
-                    updatedOrder,
-                    oldOrder.orderId
-                  )
-                ),
-            }
+        const updatedOrders =
+          orders.map(
+            (order) =>
+              String(
+                order.id
+              ) ===
+              String(
+                editingId
+              )
+                ? updatedOrder
+                : order
           );
 
-          if (
-            form.status ===
-            "Completed"
-          ) {
-            saveMonthlyRecordLocal(
-              updatedOrder
-            );
-          }
-
-          await Promise.all([
-            loadOrders(),
-            loadLiningStock(),
-          ]);
-
-          resetForm();
-
-          alert(
-            form.status ===
-              "Completed"
-              ? "Completed successfully!"
-              : "Stitching updated successfully!"
-          );
-        } catch (error) {
-          console.error(
-            "UPDATE ERROR:",
-            error
-          );
-
-          // ===========================================
-          // ROLLBACK STOCK IF ORDER UPDATE FAILS
-          // ===========================================
-
-          try {
-            if (
-              reducedNew &&
-              newStockItem
-            ) {
-              await adjustStock(
-                newStockItem.id,
-                liningUsed
-              );
-            }
-
-            if (
-              returnedOld &&
-              oldStockItem
-            ) {
-              await adjustStock(
-                oldStockItem.id,
-                -oldUsed
-              );
-            }
-
-            await loadLiningStock();
-          } catch (
-            rollbackError
-          ) {
-            console.error(
-              "ROLLBACK ERROR:",
-              rollbackError
-            );
-          }
-
-          alert(error.message);
-        }
-
-        return;
-      }
-
-      // ===============================================
-      // NEW ORDER
-      // ===============================================
-
-      if (
-        newStockItem &&
-        liningUsed >
-          Number(
-            newStockItem.quantity ||
-              0
-          )
-      ) {
-        alert(
-          `Only ${Number(
-            newStockItem.quantity ||
-              0
-          ).toFixed(
-            1
-          )}m available`
+        setOrders(
+          updatedOrders
         );
 
+        saveOrders(
+          updatedOrders
+        );
+
+        // ======================================
+        // UPDATE STOCK
+        // ======================================
+
+        updateLiningStock(
+          workingStock
+        );
+
+        // ======================================
+        // MONTHLY RECORD
+        // ======================================
+
+        if (
+          form.status ===
+          "Completed"
+        ) {
+          saveMonthlyRecordLocal(
+            updatedOrder
+          );
+        } else {
+          removeMonthlyRecord(
+            updatedOrder.id
+          );
+        }
+
+        // ======================================
+        // SUCCESS
+        // ======================================
+
+        alert(
+          form.status ===
+            "Completed"
+            ? "Completed! Record saved in Monthly Records."
+            : "Stitching record updated successfully!"
+        );
+
+        resetForm();
+
+        setSaving(false);
+
         return;
       }
 
+      // ========================================
+      // NEW ORDER
+      // ========================================
+
+      const newId =
+        Date.now();
+
       const newOrder = {
+        id: newId,
+
+        orderId:
+          `ORD-${newId}`,
+
         date:
           form.date,
 
         customerName:
           form.customerName.trim(),
 
-        dressName,
+        dressName:
+          form.dressName.trim(),
 
         dressType:
           form.dressType,
@@ -919,11 +1058,11 @@ function TailorStitching() {
 
         stitchingAmount,
 
+        liningUsed,
+
         liningName,
 
         liningColour,
-
-        liningUsed,
 
         status:
           form.status,
@@ -938,129 +1077,150 @@ function TailorStitching() {
             : null,
       };
 
-      let stockReduced =
-        false;
+      // ========================================
+      // UPDATE LINING STOCK
+      // ========================================
 
-      try {
-        // =============================================
-        // FIRST REDUCE SQLITE STOCK
-        // =============================================
+      let updatedStock = [
+        ...liningStock,
+      ];
 
-        if (
-          liningUsed > 0 &&
-          newStockItem
-        ) {
-          await adjustStock(
-            newStockItem.id,
-            -liningUsed
+      if (
+        liningUsed > 0 &&
+        liningName &&
+        liningColour
+      ) {
+        const stockItem =
+          findLiningStock(
+            liningName,
+            liningColour,
+            updatedStock
           );
 
-          stockReduced =
-            true;
+        if (!stockItem) {
+          alert(
+            "Selected lining is not available in stock."
+          );
+
+          setSaving(false);
+          return;
         }
 
-        // =============================================
-        // SAVE ORDER
-        // =============================================
+        const available =
+          Number(
+            stockItem.quantity ||
+              0
+          );
 
-        const data =
-          await apiRequest(
-            "/orders",
-            {
-              method: "POST",
+        if (
+          liningUsed >
+          available
+        ) {
+          alert(
+            `Only ${available.toFixed(
+              1
+            )}m available in lining stock.`
+          );
 
-              body:
-                JSON.stringify(
-                  createPayload(
-                    newOrder
-                  )
-                ),
+          setSaving(false);
+          return;
+        }
+
+        updatedStock =
+          updatedStock.map(
+            (item) => {
+              if (
+                item.id ===
+                stockItem.id
+              ) {
+                return {
+                  ...item,
+
+                  quantity:
+                    Number(
+                      item.quantity ||
+                        0
+                    ) -
+                    liningUsed,
+                };
+              }
+
+              return item;
             }
           );
-
-        const savedOrder = {
-          ...newOrder,
-
-          id:
-            Number(
-              data.id ||
-                data.order?.id
-            ),
-
-          orderId:
-            data.order_id ||
-            data.order?.order_id ||
-            "",
-        };
-
-        if (
-          form.status ===
-          "Completed"
-        ) {
-          saveMonthlyRecordLocal(
-            savedOrder
-          );
-        }
-
-        await Promise.all([
-          loadOrders(),
-          loadLiningStock(),
-        ]);
-
-        resetForm();
-
-        alert(
-          form.status ===
-            "Completed"
-            ? "Completed successfully!"
-            : "Stitching added successfully!"
-        );
-      } catch (error) {
-        console.error(
-          "ADD ERROR:",
-          error
-        );
-
-        // =============================================
-        // RETURN STOCK IF ORDER FAILED
-        // =============================================
-
-        if (
-          stockReduced &&
-          newStockItem
-        ) {
-          try {
-            await adjustStock(
-              newStockItem.id,
-              liningUsed
-            );
-
-            await loadLiningStock();
-          } catch (
-            rollbackError
-          ) {
-            console.error(
-              "ROLLBACK ERROR:",
-              rollbackError
-            );
-          }
-        }
-
-        alert(error.message);
       }
-    };
 
-  // ===================================================
+      // ========================================
+      // SAVE ORDER
+      // ========================================
+
+      const updatedOrders = [
+        newOrder,
+        ...orders,
+      ];
+
+      setOrders(
+        updatedOrders
+      );
+
+      saveOrders(
+        updatedOrders
+      );
+
+      // ========================================
+      // SAVE STOCK
+      // ========================================
+
+      updateLiningStock(
+        updatedStock
+      );
+
+      // ========================================
+      // MONTHLY RECORD
+      // ========================================
+
+      if (
+        form.status ===
+        "Completed"
+      ) {
+        saveMonthlyRecordLocal(
+          newOrder
+        );
+      }
+
+      // ========================================
+      // SUCCESS
+      // ========================================
+
+      alert(
+        form.status ===
+          "Completed"
+          ? "Completed! Record saved in Monthly Records."
+          : "Stitching record added successfully!"
+      );
+
+      resetForm();
+    } catch (error) {
+      console.error(
+        "Save error:",
+        error
+      );
+
+      alert(
+        "Unable to save stitching record."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ==========================================
   // EDIT
-  // ===================================================
+  // ==========================================
 
   const handleEdit = (
     order
   ) => {
-    setEditingId(
-      order.id
-    );
-
     setForm({
       date:
         order.date ||
@@ -1079,10 +1239,15 @@ function TailorStitching() {
         "Blouse",
 
       quantity:
-        order.quantity || 1,
+        order.quantity ??
+        1,
 
       stitchingAmount:
         order.stitchingAmount ??
+        "",
+
+      liningUsed:
+        order.liningUsed ??
         "",
 
       liningName:
@@ -1091,10 +1256,6 @@ function TailorStitching() {
 
       liningColour:
         order.liningColour ||
-        "",
-
-      liningUsed:
-        order.liningUsed ||
         "",
 
       status:
@@ -1106,222 +1267,282 @@ function TailorStitching() {
         "",
     });
 
+    setEditingId(
+      order.id
+    );
+
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
   };
 
-  // ===================================================
+  // ==========================================
+  // CANCEL
+  // ==========================================
+
+  const handleCancel = () => {
+    resetForm();
+  };
+
+  // ==========================================
   // DELETE
-  // ===================================================
+  // ==========================================
 
-  const handleDelete =
-    async (order) => {
-      if (
-        order.status ===
-        "Completed"
-      ) {
-        alert(
-          "Completed record cannot be deleted from Tailor Stitching."
-        );
-
-        return;
-      }
-
-      const confirmed =
-        window.confirm(
-          "Delete this record? Used lining will be returned to stock."
-        );
-
-      if (!confirmed) {
-        return;
-      }
-
-      const used =
-        Number(
-          order.liningUsed || 0
-        );
-
-      const stockItem =
-        used > 0
-          ? findLiningStock(
-              order.liningName,
-              order.liningColour
-            )
-          : null;
-
-      let returned =
-        false;
-
-      try {
-        // =============================================
-        // RETURN STOCK
-        // =============================================
-
-        if (
-          used > 0 &&
-          stockItem
-        ) {
-          await adjustStock(
-            stockItem.id,
-            used
-          );
-
-          returned = true;
-        }
-
-        // =============================================
-        // DELETE ORDER
-        // =============================================
-
-        await apiRequest(
-          `/orders/${order.id}`,
-          {
-            method: "DELETE",
-          }
-        );
-
-        await Promise.all([
-          loadOrders(),
-          loadLiningStock(),
-        ]);
-
-        if (
-          editingId ===
-          order.id
-        ) {
-          resetForm();
-        }
-
-        alert(
-          "Record deleted and lining returned to stock!"
-        );
-      } catch (error) {
-        console.error(
-          "DELETE ERROR:",
-          error
-        );
-
-        // Undo returned stock
-        if (
-          returned &&
-          stockItem
-        ) {
-          try {
-            await adjustStock(
-              stockItem.id,
-              -used
-            );
-
-            await loadLiningStock();
-          } catch (
-            rollbackError
-          ) {
-            console.error(
-              rollbackError
-            );
-          }
-        }
-
-        alert(error.message);
-      }
-    };
-
-  // ===================================================
-  // AVAILABLE LINING NAMES
-  // ===================================================
-
-  const liningNames = [
-    ...new Set(
-      liningStock
-        .filter(
-          (item) =>
-            Number(
-              item.quantity ||
-                0
-            ) > 0
-        )
-        .map(
-          (item) =>
-            item.liningName
-        )
-    ),
-  ];
-
-  // ===================================================
-  // COLOURS
-  // ===================================================
-
-  const availableColours =
-    liningStock.filter(
-      (item) =>
-        String(
-          item.liningName ||
-            ""
-        )
-          .trim()
-          .toLowerCase() ===
+  const handleDelete = (
+    id
+  ) => {
+    const order =
+      orders.find(
+        (item) =>
           String(
-            form.liningName ||
-              ""
-          )
-            .trim()
-            .toLowerCase()
+            item.id
+          ) ===
+          String(id)
+      );
+
+    if (!order) {
+      return;
+    }
+
+    // ========================================
+    // COMPLETED CANNOT DELETE
+    // ========================================
+
+    if (
+      String(
+        order.status || ""
+      ).toLowerCase() ===
+      "completed"
+    ) {
+      alert(
+        "Completed record cannot be deleted from Tailor Stitching because it must remain in Monthly Records."
+      );
+
+      return;
+    }
+
+    const confirmDelete =
+      window.confirm(
+        "Delete this stitching record? Used lining will be returned to stock."
+      );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    // ========================================
+    // RETURN LINING
+    // ========================================
+
+    let updatedStock = [
+      ...liningStock,
+    ];
+
+    const liningUsed =
+      Number(
+        order.liningUsed ||
+          0
+      );
+
+    if (
+      liningUsed > 0 &&
+      order.liningName &&
+      order.liningColour
+    ) {
+      updatedStock =
+        updatedStock.map(
+          (item) => {
+            const sameName =
+              String(
+                item.liningName ||
+                  ""
+              )
+                .trim()
+                .toLowerCase() ===
+              String(
+                order.liningName ||
+                  ""
+              )
+                .trim()
+                .toLowerCase();
+
+            const sameColour =
+              String(
+                item.colour ||
+                  ""
+              )
+                .trim()
+                .toLowerCase() ===
+              String(
+                order.liningColour ||
+                  ""
+              )
+                .trim()
+                .toLowerCase();
+
+            if (
+              sameName &&
+              sameColour
+            ) {
+              return {
+                ...item,
+
+                quantity:
+                  Number(
+                    item.quantity ||
+                      0
+                  ) +
+                  liningUsed,
+              };
+            }
+
+            return item;
+          }
+        );
+    }
+
+    // ========================================
+    // DELETE ORDER
+    // ========================================
+
+    const updatedOrders =
+      orders.filter(
+        (item) =>
+          String(
+            item.id
+          ) !==
+          String(id)
+      );
+
+    setOrders(
+      updatedOrders
     );
 
-  // ===================================================
-  // FILTER ORDERS
-  // ===================================================
+    saveOrders(
+      updatedOrders
+    );
+
+    // ========================================
+    // SAVE STOCK
+    // ========================================
+
+    updateLiningStock(
+      updatedStock
+    );
+
+    // ========================================
+    // RESET EDIT
+    // ========================================
+
+    if (
+      String(
+        editingId
+      ) ===
+      String(id)
+    ) {
+      resetForm();
+    }
+
+    alert(
+      "Stitching record deleted and lining returned to stock!"
+    );
+  };
+
+  // ==========================================
+  // FILTER
+  // ==========================================
 
   const filteredOrders =
     orders.filter(
       (order) => {
+        // Completed records are shown
+        // only in Monthly Records.
+
         if (
-          order.status ===
-          "Completed"
+          String(
+            order.status || ""
+          ).toLowerCase() ===
+          "completed"
         ) {
           return false;
         }
 
         const text =
           search
-            .trim()
-            .toLowerCase();
+            .toLowerCase()
+            .trim();
 
         return (
-          order.customerName
+          String(
+            order.customerName ||
+              ""
+          )
             .toLowerCase()
             .includes(text) ||
 
-          order.dressName
+          String(
+            order.dressName ||
+              ""
+          )
             .toLowerCase()
             .includes(text) ||
 
-          order.dressType
+          String(
+            order.dressType ||
+              ""
+          )
             .toLowerCase()
             .includes(text) ||
 
-          order.status
+          String(
+            order.status ||
+              ""
+          )
             .toLowerCase()
             .includes(text)
         );
       }
     );
 
-  // ===================================================
-  // STATS
-  // ===================================================
+  // ==========================================
+  // COMPLETED CLOTHES
+  // FROM MONTHLY RECORDS
+  // ==========================================
 
   const completed =
+    monthlyRecords.reduce(
+      (
+        total,
+        record
+      ) =>
+        total +
+        Number(
+          record.quantity ||
+            0
+        ),
+      0
+    );
+
+  // ==========================================
+  // PENDING CLOTHES
+  // GIVEN TO TAILOR + STITCHING
+  // ==========================================
+
+  const pending =
     orders
       .filter(
         (order) =>
           order.status ===
-          "Completed"
+            "Given to Tailor" ||
+          order.status ===
+            "Stitching"
       )
       .reduce(
-        (total, order) =>
+        (
+          total,
+          order
+        ) =>
           total +
           Number(
             order.quantity ||
@@ -1329,6 +1550,10 @@ function TailorStitching() {
           ),
         0
       );
+
+  // ==========================================
+  // GIVEN TO TAILOR
+  // ==========================================
 
   const givenToTailor =
     orders
@@ -1338,7 +1563,10 @@ function TailorStitching() {
           "Given to Tailor"
       )
       .reduce(
-        (total, order) =>
+        (
+          total,
+          order
+        ) =>
           total +
           Number(
             order.quantity ||
@@ -1347,22 +1575,56 @@ function TailorStitching() {
         0
       );
 
-  const pending =
-    givenToTailor;
+  // ==========================================
+  // STITCHING CLOTHES
+  // ==========================================
+
+  const stitching =
+    orders
+      .filter(
+        (order) =>
+          order.status ===
+          "Stitching"
+      )
+      .reduce(
+        (
+          total,
+          order
+        ) =>
+          total +
+          Number(
+            order.quantity ||
+              0
+          ),
+        0
+      );
+
+  // ==========================================
+  // TOTAL CLOTHES
+  // ==========================================
 
   const totalClothes =
     completed +
-    givenToTailor;
+    pending;
+
+  // ==========================================
+  // PENDING AMOUNT
+  // ==========================================
 
   const totalAmount =
     orders
       .filter(
         (order) =>
           order.status ===
-          "Given to Tailor"
+            "Given to Tailor" ||
+          order.status ===
+            "Stitching"
       )
       .reduce(
-        (total, order) =>
+        (
+          total,
+          order
+        ) =>
           total +
           Number(
             order.stitchingAmount ||
@@ -1371,48 +1633,51 @@ function TailorStitching() {
         0
       );
 
-  // ===================================================
-  // LOADING
-  // ===================================================
+  // ==========================================
+  // TOTAL LINING
+  // ==========================================
 
-  if (loading) {
-    return (
-      <div className="page-content">
-        <div className="empty-state">
-          <div>⏳</div>
-
-          <h3>
-            Loading stitching
-            records...
-          </h3>
-
-          <p>Please wait...</p>
-        </div>
-      </div>
+  const totalLining =
+    orders.reduce(
+      (
+        total,
+        order
+      ) =>
+        total +
+        Number(
+          order.liningUsed ||
+            0
+        ),
+      0
     );
-  }
 
-  // ===================================================
+  // ==========================================
   // UI
-  // ===================================================
+  // ==========================================
 
   return (
     <div className="page-content">
-      {/* HEADER */}
+
+      {/* ======================================
+          HEADER
+      ====================================== */}
 
       <div className="page-heading">
+
         <div>
           <h2>
             🧵 Tailor Stitching
           </h2>
 
           <p>
-            Manage clothes given
-            to tailor
+            Manage clothes given to tailor
           </p>
         </div>
 
         <div className="page-stats">
+
+          {/* TOTAL */}
+
           <div>
             <span>
               Total Clothes
@@ -1422,6 +1687,8 @@ function TailorStitching() {
               {totalClothes}
             </strong>
           </div>
+
+          {/* COMPLETED */}
 
           <div>
             <span>
@@ -1433,6 +1700,8 @@ function TailorStitching() {
             </strong>
           </div>
 
+          {/* PENDING */}
+
           <div>
             <span>
               Pending
@@ -1443,41 +1712,47 @@ function TailorStitching() {
             </strong>
           </div>
 
+          {/* AMOUNT */}
+
           <div>
             <span>
-              Given to Tailor
-              Amount
+              Pending Amount
             </span>
 
             <strong>
               ₹{totalAmount}
             </strong>
           </div>
+
         </div>
       </div>
 
-      {/* FORM */}
+      {/* ======================================
+          FORM
+      ====================================== */}
 
       <div className="form-card">
+
         <div className="form-title">
+
           <h3>
             {editingId !== null
               ? "✏️ Edit Stitching"
               : "➕ Add Stitching"}
           </h3>
 
-          {editingId !==
-            null && (
+          {editingId !== null && (
             <button
               type="button"
               className="cancel-btn"
               onClick={
-                resetForm
+                handleCancel
               }
             >
               Cancel
             </button>
           )}
+
         </div>
 
         <form
@@ -1485,8 +1760,13 @@ function TailorStitching() {
             handleSubmit
           }
         >
+
           <div className="form-grid">
+
+            {/* DATE */}
+
             <div className="input-group">
+
               <label>
                 Date
               </label>
@@ -1501,9 +1781,13 @@ function TailorStitching() {
                   handleChange
                 }
               />
+
             </div>
 
+            {/* CUSTOMER */}
+
             <div className="input-group">
+
               <label>
                 Customer Name
               </label>
@@ -1511,17 +1795,21 @@ function TailorStitching() {
               <input
                 type="text"
                 name="customerName"
+                placeholder="Enter customer name"
                 value={
                   form.customerName
                 }
-                placeholder="Customer name"
                 onChange={
                   handleChange
                 }
               />
+
             </div>
 
+            {/* DRESS */}
+
             <div className="input-group">
+
               <label>
                 Dress Name *
               </label>
@@ -1529,18 +1817,22 @@ function TailorStitching() {
               <input
                 type="text"
                 name="dressName"
+                placeholder="Example: Lining Blouse"
                 value={
                   form.dressName
                 }
-                placeholder="Dress name"
                 onChange={
                   handleChange
                 }
                 required
               />
+
             </div>
 
+            {/* TYPE */}
+
             <div className="input-group">
+
               <label>
                 Dress Type
               </label>
@@ -1554,6 +1846,7 @@ function TailorStitching() {
                   handleChange
                 }
               >
+
                 <option value="Blouse">
                   Blouse
                 </option>
@@ -1581,10 +1874,15 @@ function TailorStitching() {
                 <option value="Other">
                   Other
                 </option>
+
               </select>
+
             </div>
 
+            {/* QUANTITY */}
+
             <div className="input-group">
+
               <label>
                 Quantity
               </label>
@@ -1600,9 +1898,13 @@ function TailorStitching() {
                   handleChange
                 }
               />
+
             </div>
 
+            {/* AMOUNT */}
+
             <div className="input-group">
+
               <label>
                 Stitching Amount *
               </label>
@@ -1610,21 +1912,23 @@ function TailorStitching() {
               <input
                 type="number"
                 name="stitchingAmount"
+                placeholder="₹ Amount"
                 min="0"
                 value={
                   form.stitchingAmount
                 }
-                placeholder="₹ Amount"
                 onChange={
                   handleChange
                 }
                 required
               />
+
             </div>
 
             {/* LINING NAME */}
 
             <div className="input-group">
+
               <label>
                 Lining Name{" "}
                 <small>
@@ -1641,26 +1945,52 @@ function TailorStitching() {
                   handleChange
                 }
               >
+
                 <option value="">
                   Select Lining
                 </option>
 
-                {liningNames.map(
-                  (name) => (
+                {[
+                  ...new Map(
+                    liningStock
+                      .filter(
+                        (item) =>
+                          item.liningName
+                      )
+                      .map(
+                        (item) => [
+                          item.liningName,
+                          item,
+                        ]
+                      )
+                  ).values(),
+                ].map(
+                  (item) => (
+
                     <option
-                      key={name}
-                      value={name}
+                      key={
+                        item.id
+                      }
+                      value={
+                        item.liningName
+                      }
                     >
-                      {name}
+                      {
+                        item.liningName
+                      }
                     </option>
+
                   )
                 )}
+
               </select>
+
             </div>
 
-            {/* COLOUR */}
+            {/* LINING COLOUR */}
 
             <div className="input-group">
+
               <label>
                 Lining Colour{" "}
                 <small>
@@ -1677,43 +2007,65 @@ function TailorStitching() {
                   handleChange
                 }
               >
+
                 <option value="">
                   Select Colour
                 </option>
 
-                {availableColours.map(
-                  (item) => (
-                    <option
-                      key={
-                        item.id
-                      }
-                      value={
-                        item.colour
-                      }
-                    >
-                      {
-                        item.colour
-                      }{" "}
-                      —{" "}
-                      {Number(
-                        item.quantity ||
-                          0
-                      ).toFixed(
-                        1
-                      )}
-                      m
-                    </option>
+                {liningStock
+                  .filter(
+                    (item) =>
+                      !form.liningName ||
+                      String(
+                        item.liningName ||
+                          ""
+                      )
+                        .trim()
+                        .toLowerCase() ===
+                        String(
+                          form.liningName ||
+                            ""
+                        )
+                          .trim()
+                          .toLowerCase()
                   )
-                )}
+                  .map(
+                    (item) => (
+
+                      <option
+                        key={
+                          item.id
+                        }
+                        value={
+                          item.colour
+                        }
+                      >
+                        {
+                          item.colour
+                        }{" "}
+                        —{" "}
+                        {Number(
+                          item.quantity ||
+                            0
+                        ).toFixed(
+                          1
+                        )}
+                        m
+                      </option>
+
+                    )
+                  )}
+
               </select>
+
             </div>
 
             {/* LINING USED */}
 
             <div className="input-group">
+
               <label>
-                Lining Used
-                (Meter){" "}
+                Lining Used (Meter){" "}
                 <small>
                   (Optional)
                 </small>
@@ -1722,21 +2074,23 @@ function TailorStitching() {
               <input
                 type="number"
                 name="liningUsed"
+                placeholder="Example: 1.5"
                 min="0"
                 step="0.1"
                 value={
                   form.liningUsed
                 }
-                placeholder="Example: 1.5"
                 onChange={
                   handleChange
                 }
               />
+
             </div>
 
             {/* STATUS */}
 
             <div className="input-group">
+
               <label>
                 Status
               </label>
@@ -1750,6 +2104,7 @@ function TailorStitching() {
                   handleChange
                 }
               >
+
                 <option value="Given to Tailor">
                   Given to Tailor
                 </option>
@@ -1765,46 +2120,63 @@ function TailorStitching() {
                 <option value="Delivered">
                   Delivered
                 </option>
+
               </select>
+
             </div>
 
             {/* NOTES */}
 
             <div className="input-group full-width">
+
               <label>
                 Notes
               </label>
 
               <textarea
                 name="notes"
-                rows="3"
+                placeholder="Any additional details..."
                 value={
                   form.notes
                 }
-                placeholder="Any additional details..."
                 onChange={
                   handleChange
                 }
+                rows="3"
               />
+
             </div>
+
           </div>
 
           <button
             className="primary-btn"
             type="submit"
+            disabled={
+              saving
+            }
           >
-            {editingId !== null
-              ? "Update Stitching"
-              : "+ Add Stitching"}
+            {saving
+              ? "Saving..."
+              : editingId !== null
+                ? "Update Stitching"
+                : "+ Add Stitching"}
           </button>
+
         </form>
+
       </div>
 
-      {/* TABLE */}
+      {/* ======================================
+          TABLE
+      ====================================== */}
 
       <div className="table-card">
+
         <div className="table-header">
+
           <div>
+
             <h3>
               Stitching Records
             </h3>
@@ -1815,52 +2187,74 @@ function TailorStitching() {
               }{" "}
               records found
             </p>
+
           </div>
 
           <input
             className="search-input"
             type="text"
             placeholder="🔍 Search..."
-            value={search}
+            value={
+              search
+            }
             onChange={(e) =>
               setSearch(
                 e.target.value
               )
             }
           />
+
         </div>
 
         {filteredOrders.length ===
         0 ? (
+
           <div className="empty-state">
-            <div>🧵</div>
+
+            <div>
+              🧵
+            </div>
 
             <h3>
-              No stitching
-              records
+              No stitching records
             </h3>
 
             <p>
-              Add your first
-              stitching record.
+              Add your first tailor
+              stitching record above.
             </p>
+
           </div>
+
         ) : (
+
           <div className="table-wrapper">
+
             <table>
+
               <thead>
+
                 <tr>
-                  <th>Date</th>
+
+                  <th>
+                    Date
+                  </th>
 
                   <th>
                     Customer
                   </th>
 
-                  <th>Dress</th>
+                  <th>
+                    Dress
+                  </th>
 
-                  <th>Type</th>
+                  <th>
+                    Type
+                  </th>
 
-                  <th>Qty</th>
+                  <th>
+                    Qty
+                  </th>
 
                   <th>
                     Amount
@@ -1870,7 +2264,9 @@ function TailorStitching() {
                     Lining
                   </th>
 
-                  <th>Used</th>
+                  <th>
+                    Used
+                  </th>
 
                   <th>
                     Status
@@ -1879,17 +2275,22 @@ function TailorStitching() {
                   <th>
                     Action
                   </th>
+
                 </tr>
+
               </thead>
 
               <tbody>
+
                 {filteredOrders.map(
                   (order) => (
+
                     <tr
                       key={
                         order.id
                       }
                     >
+
                       <td>
                         {
                           order.date
@@ -1897,16 +2298,20 @@ function TailorStitching() {
                       </td>
 
                       <td>
-                        {order.customerName ||
-                          "Walk-in Customer"}
+                        {
+                          order.customerName ||
+                          "Walk-in Customer"
+                        }
                       </td>
 
                       <td>
+
                         <strong>
                           {
                             order.dressName
                           }
                         </strong>
+
                       </td>
 
                       <td>
@@ -1950,6 +2355,7 @@ function TailorStitching() {
                       </td>
 
                       <td>
+
                         <span
                           className={
                             "status " +
@@ -1968,10 +2374,13 @@ function TailorStitching() {
                             order.status
                           }
                         </span>
+
                       </td>
 
                       <td>
+
                         <div className="action-buttons">
+
                           <button
                             type="button"
                             className="edit-btn"
@@ -1989,22 +2398,32 @@ function TailorStitching() {
                             className="delete-btn"
                             onClick={() =>
                               handleDelete(
-                                order
+                                order.id
                               )
                             }
                           >
                             Delete
                           </button>
+
                         </div>
+
                       </td>
+
                     </tr>
+
                   )
                 )}
+
               </tbody>
+
             </table>
+
           </div>
+
         )}
+
       </div>
+
     </div>
   );
 }

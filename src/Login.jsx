@@ -1,8 +1,8 @@
 import { useState } from "react";
 import "./Auth.css";
 
-// Backend API URL
-const API_URL = "https://subasree-boutique-backend.onrender.com";
+// Local Backend API
+const API_URL = "http://localhost:5000";
 
 function Login({ onLogin, goToRegister }) {
   const [username, setUsername] = useState("");
@@ -29,36 +29,44 @@ function Login({ onLogin, goToRegister }) {
         `${API_URL}/api/auth/login`,
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             username: username.trim(),
-            password,
+            password: password,
           }),
         }
       );
 
-      // Handle non-JSON response
       let data;
 
       try {
         data = await response.json();
       } catch {
-        throw new Error("Server returned an invalid response");
+        throw new Error(
+          "Server returned an invalid response"
+        );
       }
 
+      // Login failed
       if (!response.ok) {
         throw new Error(
           data.message || "Invalid username or password"
         );
       }
 
-      // Save login information
+      // Save JWT token
       if (data.token) {
-        localStorage.setItem("token", data.token);
+        localStorage.setItem(
+          "token",
+          data.token
+        );
       }
 
+      // Save current user
       if (data.user) {
         localStorage.setItem(
           "currentUser",
@@ -66,19 +74,27 @@ function Login({ onLogin, goToRegister }) {
         );
       }
 
-      // Login success
+      // Login successful
       onLogin(data.user);
 
     } catch (error) {
-      console.error("Login Error:", error);
+      console.error(
+        "Login Error:",
+        error
+      );
 
-      if (error.name === "TypeError") {
+      if (
+        error.name === "TypeError"
+      ) {
         setError(
-          "Unable to connect to server. Please check your backend."
+          "Unable to connect to local backend. Make sure npm run dev is running."
         );
       } else {
-        setError(error.message || "Login failed");
+        setError(
+          error.message || "Login failed"
+        );
       }
+
     } finally {
       setLoading(false);
     }
@@ -95,7 +111,9 @@ function Login({ onLogin, goToRegister }) {
         </div>
 
         {/* Title */}
-        <h1>Tailor Manager</h1>
+        <h1>
+          Tailor Manager
+        </h1>
 
         <p className="auth-subtitle">
           Login to manage your tailoring business
@@ -117,7 +135,10 @@ function Login({ onLogin, goToRegister }) {
               placeholder="Enter username"
               value={username}
               onChange={(e) => {
-                setUsername(e.target.value);
+                setUsername(
+                  e.target.value
+                );
+
                 setError("");
               }}
               autoComplete="username"
@@ -139,7 +160,10 @@ function Login({ onLogin, goToRegister }) {
               placeholder="Enter password"
               value={password}
               onChange={(e) => {
-                setPassword(e.target.value);
+                setPassword(
+                  e.target.value
+                );
+
                 setError("");
               }}
               autoComplete="current-password"
@@ -161,7 +185,9 @@ function Login({ onLogin, goToRegister }) {
             className="auth-button"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
 
         </form>
